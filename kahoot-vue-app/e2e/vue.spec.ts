@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
 
 const user = {
   id: 9,
@@ -22,7 +22,17 @@ const quizResponse = {
   updatedAt: '2026-09-30T10:00:00.000Z',
 }
 
-async function signIn(page: import('@playwright/test').Page): Promise<void> {
+test.beforeEach(async ({ page }) => {
+  await page.route('**/quizzes', async (route) => {
+    if (route.request().method() === 'GET') {
+      await route.fulfill({ status: 200, json: [] })
+      return
+    }
+    await route.fallback()
+  })
+})
+
+async function signIn(page: Page): Promise<void> {
   await page.route('**/auth/login', async (route) => {
     await route.fulfill({ status: 200, json: authResponse })
   })
@@ -94,7 +104,7 @@ test('signs in, shows the authenticated screen, and logs out', async ({ page }) 
   await page.getByRole('button', { name: 'Sign in' }).click()
 
   await expect(page).toHaveURL(/\/dashboard$/)
-  await expect(page.getByRole('heading', { name: 'Good to have you, player_one.' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Your quizzes' })).toBeVisible()
   expect(requestBody).toEqual({ email: 'player@example.com', password: 'password123' })
 
   await page.getByRole('button', { name: 'Sign out' }).click()
@@ -121,6 +131,51 @@ test('redirects unauthenticated visitors away from the protected screen', async 
   await expect(page).toHaveURL(/\/login$/)
 })
 
+test('lists quizzes returned for the signed-in user', async ({ page }) => {
+  let authorization: string | undefined
+  await page.route('**/quizzes', async (route) => {
+    if (route.request().method() !== 'GET') {
+      await route.fallback()
+      return
+    }
+    authorization = route.request().headers().authorization
+    await route.fulfill({ status: 200, json: [quizResponse] })
+  })
+  await signIn(page)
+
+  await expect(page.getByRole('heading', { name: 'Your quizzes' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Fractions' })).toBeVisible()
+  await expect(page.getByText('No description')).toBeVisible()
+  expect(authorization).toBe('Bearer signed-token')
+})
+
+test('shows an empty state when the user has no quizzes', async ({ page }) => {
+  await signIn(page)
+
+  await expect(page.getByRole('heading', { name: 'No quizzes yet' })).toBeVisible()
+})
+
+test('shows a recoverable message if the quiz list fails to load', async ({ page }) => {
+  await page.route('**/quizzes', async (route) => {
+    if (route.request().method() !== 'GET') {
+      await route.fallback()
+      return
+    }
+    await route.fulfill({ status: 500, json: { message: 'Quiz list unavailable' } })
+  })
+  await signIn(page)
+
+  await expect(page.getByRole('alert')).toContainText('Quiz list unavailable')
+  await expect(page.getByRole('button', { name: 'Try again' })).toBeVisible()
+})
+
+test('shows create and sign-out actions as accessible icon buttons', async ({ page }) => {
+  await signIn(page)
+
+  await expect(page.getByRole('link', { name: 'Create a quiz' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible()
+})
+
 test('opens the quiz form from the dashboard', async ({ page }) => {
   await signIn(page)
 
@@ -135,6 +190,10 @@ test('opens the quiz form from the dashboard', async ({ page }) => {
 test('requires a title before sending a quiz creation request', async ({ page }) => {
   let apiCalled = false
   await page.route('**/quizzes', async (route) => {
+		if (route.request().method() !== 'POST') {
+			await route.fallback()
+			return
+		}
     apiCalled = true
     await route.fulfill({ status: 201, json: quizResponse })
   })
@@ -150,6 +209,10 @@ test('creates a quiz and returns to the dashboard with confirmation', async ({ p
   let requestBody: unknown
   let authorization: string | undefined
   await page.route('**/quizzes', async (route) => {
+		if (route.request().method() !== 'POST') {
+			await route.fallback()
+			return
+		}
     requestBody = route.request().postDataJSON()
     authorization = route.request().headers().authorization
     await route.fulfill({ status: 201, json: quizResponse })

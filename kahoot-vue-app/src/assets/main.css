@@ -138,29 +138,6 @@
   transition: background-color 140ms ease, transform 140ms ease;
 }
 
-.auth-submit--centered {
-  display: flex;
-  width: fit-content;
-  margin-inline: auto;
-}
-
-.auth-submit--secondary {
-  color: var(--color-teal-dark);
-  background: transparent;
-  border: 1px solid var(--color-line);
-}
-
-.auth-submit--secondary:hover:not(:disabled) {
-  color: var(--color-teal-dark);
-  background: #e7eee8;
-}
-
-.dashboard-actions {
-  display: grid;
-  width: 100%;
-  gap: 12px;
-}
-
 .auth-submit:hover:not(:disabled) {
   background: #d95745;
   transform: translateY(-1px);
@@ -203,6 +180,172 @@
   background: #e2f0ea;
 }
 
+.dashboard-page {
+  min-height: 100svh;
+  padding: 88px 24px 112px;
+  color: var(--color-ink);
+  background: var(--color-paper);
+}
+
+.dashboard-signout {
+  position: fixed;
+  z-index: 2;
+  top: 20px;
+  right: 24px;
+}
+
+.dashboard-icon-button,
+.dashboard-create {
+  display: grid;
+  width: 46px;
+  height: 46px;
+  place-items: center;
+  border: 1px solid var(--color-line);
+  border-radius: 50%;
+  color: var(--color-teal-dark);
+  background: var(--color-white);
+  cursor: pointer;
+  transition: background-color 140ms ease, transform 140ms ease;
+}
+
+.dashboard-icon-button:hover {
+  background: #e7eee8;
+  transform: translateY(-1px);
+}
+
+.dashboard-main {
+  width: min(100%, 880px);
+  margin: 0 auto;
+}
+
+.dashboard-heading {
+  margin-bottom: 34px;
+}
+
+.dashboard-eyebrow {
+  margin: 0 0 9px;
+  color: var(--color-teal);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.dashboard-heading h1 {
+  margin: 0;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 36px;
+  font-weight: 600;
+  line-height: 1.15;
+}
+
+.dashboard-subtitle {
+  margin: 10px 0 0;
+  color: var(--color-muted);
+  font-size: 14px;
+}
+
+.dashboard-message,
+.dashboard-empty,
+.dashboard-error {
+  color: var(--color-muted);
+  font-size: 14px;
+}
+
+.dashboard-empty {
+  border-top: 1px solid var(--color-line);
+  padding: 26px 0;
+}
+
+.dashboard-empty h2 {
+  margin: 0;
+  color: var(--color-ink);
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 19px;
+  font-weight: 600;
+}
+
+.dashboard-empty p {
+  margin: 8px 0 0;
+}
+
+.dashboard-error p {
+  margin: 0 0 8px;
+  color: #79382e;
+}
+
+.dashboard-retry {
+  border: 0;
+  padding: 0;
+  color: var(--color-teal-dark);
+  background: none;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.quiz-list {
+  margin: 0;
+  border-top: 1px solid var(--color-line);
+  padding: 0;
+  list-style: none;
+}
+
+.quiz-row {
+  display: flex;
+  min-height: 84px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  border-bottom: 1px solid var(--color-line);
+  padding: 17px 4px;
+}
+
+.quiz-row-copy {
+  min-width: 0;
+}
+
+.quiz-row h2 {
+  overflow-wrap: anywhere;
+  margin: 0;
+  color: var(--color-ink);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.quiz-row p {
+  overflow-wrap: anywhere;
+  margin: 6px 0 0;
+  color: var(--color-muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.quiz-row time {
+  flex: 0 0 auto;
+  color: var(--color-muted);
+  font-size: 12px;
+}
+
+.dashboard-create {
+  position: fixed;
+  z-index: 2;
+  right: 24px;
+  bottom: 24px;
+  width: 58px;
+  height: 58px;
+  border: 0;
+  color: #fffefa;
+  background: var(--color-coral);
+  box-shadow: 0 5px 16px rgba(23, 37, 34, 0.16);
+  text-decoration: none;
+}
+
+.dashboard-create:hover {
+  background: #d95745;
+  transform: translateY(-2px);
+}
+
 @media (max-width: 480px) {
   .auth-brand {
     padding: 24px 20px 0;
@@ -214,6 +357,38 @@
 
   .auth-heading h2 {
     font-size: 30px;
+  }
+
+  .dashboard-page {
+    padding: 84px 20px 100px;
+  }
+
+  .dashboard-signout {
+    top: 16px;
+    right: 16px;
+  }
+
+  .dashboard-main {
+    width: 100%;
+  }
+
+  .dashboard-heading h1 {
+    font-size: 31px;
+  }
+
+  .quiz-row {
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .quiz-row time {
+    max-width: 84px;
+    text-align: right;
+  }
+
+  .dashboard-create {
+    right: 18px;
+    bottom: 18px;
   }
 }
 

@@ -24,21 +24,24 @@ function getErrorMessage(payload: unknown): string | undefined {
 	return undefined
 }
 
-export async function postJson(
+async function requestJson(
 	path: string,
-	body: unknown,
+	method: 'GET' | 'POST',
+	body?: unknown,
 	accessToken?: string,
 ): Promise<unknown> {
 	let response: Response
 
 	try {
+		const headers: Record<string, string> = {}
+		if (body !== undefined) headers['Content-Type'] = 'application/json'
+		if (accessToken) headers.Authorization = `Bearer ${accessToken}`
+
+		const request: RequestInit = { method, headers }
+		if (body !== undefined) request.body = JSON.stringify(body)
+
 		response = await fetch(`${apiBaseUrl}${path}`, {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json',
-				...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-			},
-			body: JSON.stringify(body),
+			...request,
 		})
 	} catch {
 		throw new ApiError('Unable to reach the server. Check your connection and try again.')
@@ -53,4 +56,16 @@ export async function postJson(
 	}
 
 	return payload
+}
+
+export function getJson(path: string, accessToken?: string): Promise<unknown> {
+	return requestJson(path, 'GET', undefined, accessToken)
+}
+
+export function postJson(
+	path: string,
+	body: unknown,
+	accessToken?: string,
+): Promise<unknown> {
+	return requestJson(path, 'POST', body, accessToken)
 }

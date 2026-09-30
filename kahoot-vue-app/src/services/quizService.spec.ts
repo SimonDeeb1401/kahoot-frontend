@@ -26,6 +26,22 @@ afterEach(() => {
 })
 
 describe('quizService', () => {
+	it('lists the authenticated user quizzes with the bearer token', async () => {
+		const fetchMock = mockFetch([quiz], 200)
+
+		await expect(quizService.findAll('signed-token')).resolves.toEqual([quiz])
+		expect(fetchMock).toHaveBeenCalledWith('/quizzes', {
+			method: 'GET',
+			headers: { Authorization: 'Bearer signed-token' },
+		})
+	})
+
+	it('rejects an unexpected quiz list response shape', async () => {
+		mockFetch({ quizzes: [quiz] }, 200)
+
+		await expect(quizService.findAll('signed-token')).rejects.toBeInstanceOf(ApiError)
+	})
+
 	it('posts quiz details with the bearer token and returns the saved quiz', async () => {
 		const fetchMock = mockFetch(quiz)
 		const input = { title: 'Fractions', description: 'A quick review' }

@@ -1,4 +1,4 @@
-import { ApiError, postJson } from './api'
+import { ApiError, getJson, postJson } from './api'
 import type { CreateQuizInput, Quiz } from '../types/quiz'
 
 function isQuiz(value: unknown): value is Quiz {
@@ -16,6 +16,14 @@ function isQuiz(value: unknown): value is Quiz {
 }
 
 export const quizService = {
+	async findAll(accessToken: string): Promise<Quiz[]> {
+		const result = await getJson('/quizzes', accessToken)
+		if (!Array.isArray(result) || !result.every(isQuiz)) {
+			throw new ApiError('The server returned an unexpected quiz list response.')
+		}
+		return result
+	},
+
 	async create(input: CreateQuizInput, accessToken: string): Promise<Quiz> {
 		const result = await postJson('/quizzes', input, accessToken)
 		if (!isQuiz(result)) {
