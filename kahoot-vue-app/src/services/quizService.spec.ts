@@ -57,6 +57,26 @@ describe('quizService', () => {
 		})
 	})
 
+	it('deletes a quiz with the bearer token and accepts a no-content response', async () => {
+		const fetchMock = mockFetch(null, 204)
+
+		await expect(quizService.remove(quiz.id, 'signed-token')).resolves.toBeUndefined()
+		expect(fetchMock).toHaveBeenCalledWith(`/quizzes/${quiz.id}`, {
+			method: 'DELETE',
+			headers: { Authorization: 'Bearer signed-token' },
+		})
+	})
+
+	it('surfaces errors from a failed quiz deletion', async () => {
+		mockFetch({ message: 'Quiz not found' }, 404)
+
+		await expect(quizService.remove(quiz.id, 'signed-token')).rejects.toMatchObject({
+			name: 'ApiError',
+			message: 'Quiz not found',
+			status: 404,
+		})
+	})
+
 	it('rejects an unexpected successful response shape', async () => {
 		mockFetch({ id: 14, title: 'Fractions' })
 

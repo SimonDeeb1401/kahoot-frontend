@@ -104,7 +104,7 @@ test('signs in, shows the authenticated screen, and logs out', async ({ page }) 
   await page.getByRole('button', { name: 'Sign in' }).click()
 
   await expect(page).toHaveURL(/\/dashboard$/)
-  await expect(page.getByRole('heading', { name: 'Your quizzes' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'My quizzes' })).toBeVisible()
   expect(requestBody).toEqual({ email: 'player@example.com', password: 'password123' })
 
   await page.getByRole('button', { name: 'Sign out' }).click()
@@ -143,7 +143,7 @@ test('lists quizzes returned for the signed-in user', async ({ page }) => {
   })
   await signIn(page)
 
-  await expect(page.getByRole('heading', { name: 'Your quizzes' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'My quizzes' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Fractions' })).toBeVisible()
   await expect(page.getByText('No description')).toBeVisible()
   expect(authorization).toBe('Bearer signed-token')
@@ -174,6 +174,61 @@ test('shows create and sign-out actions as accessible icon buttons', async ({ pa
 
   await expect(page.getByRole('link', { name: 'Create a quiz' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible()
+})
+
+test('asks before deleting a quiz and keeps it when deletion is cancelled', async ({ page }) => {
+  let deleteCalled = false
+  await page.route('**/quizzes', async (route) => {
+    if (route.request().method() === 'GET') {
+      await route.fulfill({ status: 200, json: [quizResponse] })
+      return
+    }
+    await route.fallback()
+  })
+  await page.route('**/quizzes/**', async (route) => {
+    deleteCalled = route.request().method() === 'DELETE'
+    await route.fulfill({ status: 204, body: '' })
+  })
+  await signIn(page)
+
+  let dialogMessage = ''
+  page.once('dialog', async (dialog) => {
+    dialogMessage = dialog.message()
+    await dialog.dismiss()
+  })
+  await page.getByRole('button', { name: 'Delete Fractions' }).click()
+
+  expect(dialogMessage).toContain('Fractions')
+  await expect(page.getByRole('heading', { name: 'Fractions' })).toBeVisible()
+  expect(deleteCalled).toBe(false)
+})
+
+test('deletes the quiz only after confirmation', async ({ page }) => {
+  let authorization: string | undefined
+  await page.route('**/quizzes', async (route) => {
+    if (route.request().method() === 'GET') {
+      await route.fulfill({ status: 200, json: [quizResponse] })
+      return
+    }
+    await route.fallback()
+  })
+  await page.route('**/quizzes/**', async (route) => {
+    if (route.request().method() === 'DELETE') {
+      authorization = route.request().headers().authorization
+      await route.fulfill({ status: 204, body: '' })
+      return
+    }
+    await route.fallback()
+  })
+  await signIn(page)
+
+  page.once('dialog', (dialog) => dialog.accept())
+  await page.getByRole('button', { name: 'Delete Fractions' }).click()
+
+  await expect(page.getByRole('status')).toHaveText('Quiz deleted successfully.')
+  await expect(page.getByRole('heading', { name: 'Fractions' })).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'No quizzes yet' })).toBeVisible()
+  expect(authorization).toBe('Bearer signed-token')
 })
 
 test('opens the quiz form from the dashboard', async ({ page }) => {
@@ -223,7 +278,7 @@ test('creates a quiz and returns to the dashboard with confirmation', async ({ p
   await page.getByRole('button', { name: 'Create quiz' }).click()
 
   await expect(page).toHaveURL(/\/dashboard$/)
-  await expect(page.getByRole('status')).toHaveText('Quiz created successfully.')
+  await expect(page.getByText('Quiz created successfully.')).toBeVisible()
   expect(requestBody).toEqual({ title: 'Fractions' })
   expect(authorization).toBe('Bearer signed-token')
 })

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { LogOut, Plus } from '@lucide/vue'
+import { LogOut, Plus, Trash2 } from '@lucide/vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useAuth } from '../composables/useAuth'
 import { quizService } from '../services/quizService'
@@ -12,6 +12,9 @@ const router = useRouter()
 const quizzes = ref<Quiz[]>([])
 const isLoading = ref(true)
 const error = ref<string | null>(null)
+const deleteError = ref<string | null>(null)
+const deleteSuccess = ref(false)
+const deletingQuizId = ref<number | null>(null)
 const quizCreated = ref(false)
 
 async function loadQuizzes(): Promise<void> {
@@ -45,6 +48,30 @@ async function logout(): Promise<void> {
 	await router.replace({ name: 'login' })
 }
 
+async function deleteQuiz(quiz: Quiz): Promise<void> {
+	if (deletingQuizId.value !== null) return
+	if (!window.confirm(`Delete "${quiz.title}"? This cannot be undone.`)) return
+
+	const accessToken = auth.accessToken
+	if (!accessToken) {
+		await router.replace({ name: 'login' })
+		return
+	}
+
+	deletingQuizId.value = quiz.id
+	deleteError.value = null
+	deleteSuccess.value = false
+	try {
+		await quizService.remove(quiz.id, accessToken)
+		quizzes.value = quizzes.value.filter((item) => item.id !== quiz.id)
+		deleteSuccess.value = true
+	} catch (cause) {
+		deleteError.value = cause instanceof Error ? cause.message : 'Unable to delete the quiz.'
+	} finally {
+		deletingQuizId.value = null
+	}
+}
+
 function formatDate(value: string): string {
 	return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(new Date(value))
 }
@@ -69,6 +96,8 @@ function formatDate(value: string): string {
 			</header>
 
 			<p v-if="quizCreated" class="form-notice" role="status">Quiz created successfully.</p>
+			<p v-if="deleteSuccess" class="form-notice" role="status">Quiz deleted successfully.</p>
+			<p v-if="deleteError" class="form-error" role="alert">{{ deleteError }}</p>
 			<p v-if="isLoading" class="dashboard-message" role="status">Loading quizzes...</p>
 
 			<div v-else-if="error" class="dashboard-error" role="alert">
@@ -87,7 +116,19 @@ function formatDate(value: string): string {
 						<h2>{{ quiz.title }}</h2>
 						<p>{{ quiz.description || 'No description' }}</p>
 					</div>
-					<time :datetime="quiz.createdAt">{{ formatDate(quiz.createdAt) }}</time>
+					<div class="quiz-row-actions">
+						<time :datetime="quiz.createdAt">{{ formatDate(quiz.createdAt) }}</time>
+						<button
+							class="quiz-delete-button"
+							type="button"
+							:aria-label="`Delete ${quiz.title}`"
+							:title="`Delete ${quiz.title}`"
+							:disabled="deletingQuizId !== null"
+							@click="deleteQuiz(quiz)"
+						>
+							<Trash2 :size="18" :stroke-width="2" aria-hidden="true" />
+						</button>
+					</div>
 				</li>
 			</ul>
 		</section>

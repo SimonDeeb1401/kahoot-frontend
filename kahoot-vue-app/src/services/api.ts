@@ -26,7 +26,7 @@ function getErrorMessage(payload: unknown): string | undefined {
 
 async function requestJson(
 	path: string,
-	method: 'GET' | 'POST',
+	method: 'GET' | 'POST' | 'DELETE',
 	body?: unknown,
 	accessToken?: string,
 ): Promise<unknown> {
@@ -68,4 +68,8 @@ export function postJson(
 	accessToken?: string,
 ): Promise<unknown> {
 	return requestJson(path, 'POST', body, accessToken)
+}
+
+export function deleteJson(path: string, accessToken?: string): Promise<unknown> {
+	return requestJson(path, 'DELETE', undefined, accessToken)
 }

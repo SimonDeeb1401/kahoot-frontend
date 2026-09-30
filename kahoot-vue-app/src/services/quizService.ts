@@ -1,4 +1,4 @@
-import { ApiError, getJson, postJson } from './api'
+import { ApiError, deleteJson, getJson, postJson } from './api'
 import type { CreateQuizInput, Quiz } from '../types/quiz'
 
 function isQuiz(value: unknown): value is Quiz {
@@ -30,5 +30,9 @@ export const quizService = {
 			throw new ApiError('The server returned an unexpected quiz response.')
 		}
 		return result
+	},
+
+	async remove(id: number, accessToken: string): Promise<void> {
+		await deleteJson(`/quizzes/${id}`, accessToken)
 	},
 }

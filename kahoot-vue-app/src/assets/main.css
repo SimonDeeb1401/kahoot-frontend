@@ -327,6 +327,38 @@
   font-size: 12px;
 }
 
+.quiz-row-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 12px;
+}
+
+.quiz-delete-button {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid var(--color-line);
+  border-radius: 50%;
+  color: var(--color-muted);
+  background: transparent;
+  cursor: pointer;
+  transition: color 140ms ease, background-color 140ms ease, border-color 140ms ease;
+}
+
+.quiz-delete-button:hover:not(:disabled) {
+  border-color: #e4b2a7;
+  color: #a53b2b;
+  background: #f9e8e2;
+}
+
+.quiz-delete-button:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
 .dashboard-create {
   position: fixed;
   z-index: 2;
@@ -379,6 +411,10 @@
   .quiz-row {
     align-items: flex-start;
     gap: 12px;
+  }
+
+  .quiz-row-actions {
+    gap: 8px;
   }
 
   .quiz-row time {
