@@ -6,136 +6,45 @@
 
 .auth-layout {
   display: grid;
-  grid-template-columns: minmax(310px, 0.92fr) minmax(400px, 1.08fr);
-  min-height: 100vh;
+  min-height: 100svh;
+  grid-template-rows: minmax(0, 1fr);
+  background: var(--color-paper);
 }
 
-.auth-story {
-  position: relative;
-  display: flex;
-  min-height: 100vh;
-  flex-direction: column;
-  justify-content: space-between;
-  overflow: hidden;
-  padding: 42px 52px 34px;
-  color: var(--color-white);
-  background-color: var(--color-teal);
-  background-image: radial-gradient(rgba(255, 255, 255, 0.12) 1px, transparent 1px);
-  background-size: 18px 18px;
+.auth-brand {
+  width: min(100%, 468px);
+  margin: 0 auto;
+  padding: 30px 24px 0;
+  text-align: center;
 }
 
 .brand-mark {
   width: fit-content;
-  color: inherit;
+  color: var(--color-teal-dark);
   font-family: 'Space Grotesk', sans-serif;
-  font-size: 24px;
+  font-size: 22px;
   font-weight: 700;
   text-decoration: none;
 }
 
 .brand-mark span {
-  color: var(--color-yellow);
-}
-
-.story-copy {
-  position: relative;
-  z-index: 1;
-  max-width: 440px;
-  margin-top: auto;
-  padding: 70px 0 38px;
-  animation: auth-enter 550ms ease-out both;
-}
-
-.story-kicker,
-.auth-eyebrow {
-  margin: 0 0 16px;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-}
-
-.story-kicker {
-  color: var(--color-yellow);
-}
-
-.story-copy h1 {
-  margin: 0;
-  font-family: 'Space Grotesk', sans-serif;
-  font-size: 46px;
-  font-weight: 600;
-  line-height: 1.06;
-}
-
-.story-description {
-  max-width: 330px;
-  margin: 18px 0 0;
-  color: rgba(255, 254, 250, 0.84);
-  font-size: 15px;
-  line-height: 1.65;
-}
-
-.story-tiles {
-  position: absolute;
-  right: 38px;
-  bottom: 128px;
-  display: grid;
-  width: 190px;
-  height: 156px;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
-  transform: rotate(-8deg);
-}
-
-.story-tile {
-  display: grid;
-  place-items: center;
-  border-radius: 5px;
-  color: var(--color-ink);
-  font-size: 10px;
-  font-weight: 700;
-  animation: tile-arrive 600ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
-}
-
-.story-tile--play {
-  background: var(--color-yellow);
-  animation-delay: 100ms;
-}
-
-.story-tile--think {
-  background: #f1eee4;
-  animation-delay: 180ms;
-}
-
-.story-tile--share {
-  grid-column: 1 / 3;
-  background: var(--color-coral);
-  animation-delay: 260ms;
-}
-
-.story-footer {
-  position: relative;
-  z-index: 1;
-  margin: 30px 0 0;
-  color: rgba(255, 254, 250, 0.75);
-  font-size: 12px;
+  color: var(--color-coral);
 }
 
 .auth-content {
   display: grid;
   min-width: 0;
-  min-height: 100vh;
   place-items: center;
-  padding: 56px 42px;
-  background: var(--color-paper);
+  padding: 24px 24px 64px;
 }
 
 .auth-panel {
   width: min(100%, 420px);
-  animation: auth-enter 450ms 60ms ease-out both;
 }
 
 .auth-heading {
   margin-bottom: 30px;
+  text-align: center;
 }
 
 .auth-eyebrow {
@@ -218,6 +127,12 @@
   transition: background-color 140ms ease, transform 140ms ease;
 }
 
+.auth-submit--centered {
+  display: flex;
+  width: fit-content;
+  margin-inline: auto;
+}
+
 .auth-submit:hover:not(:disabled) {
   background: #d95745;
   transform: translateY(-1px);
@@ -260,96 +175,13 @@
   background: #e2f0ea;
 }
 
-@keyframes auth-enter {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes tile-arrive {
-  from {
-    opacity: 0;
-    transform: translateY(12px) rotate(4deg);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0) rotate(0);
-  }
-}
-
-@media (max-width: 900px) {
-  .auth-layout {
-    grid-template-columns: minmax(250px, 0.8fr) minmax(380px, 1.2fr);
-  }
-
-  .auth-story {
-    padding: 34px 30px 28px;
-  }
-
-  .story-tiles {
-    right: 22px;
-    bottom: 112px;
-    width: 150px;
-    height: 128px;
-  }
-}
-
-@media (max-width: 680px) {
-  .auth-layout {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .auth-story {
-    min-height: 0;
-    padding: 22px 24px 26px;
-  }
-
-  .brand-mark {
-    font-size: 21px;
-  }
-
-  .story-copy {
-    max-width: 260px;
-    padding: 28px 0 0;
-  }
-
-  .story-kicker {
-    margin-bottom: 8px;
-  }
-
-  .story-copy h1 {
-    font-size: 31px;
-  }
-
-  .story-description,
-  .story-footer {
-    display: none;
-  }
-
-  .story-tiles {
-    right: 18px;
-    bottom: 24px;
-    width: 102px;
-    height: 82px;
-    gap: 5px;
-  }
-
-  .story-tile {
-    font-size: 7px;
+@media (max-width: 480px) {
+  .auth-brand {
+    padding: 24px 20px 0;
   }
 
   .auth-content {
-    min-height: 0;
-    flex: 1;
-    padding: 34px 24px 42px;
+    padding: 20px 20px 40px;
   }
 
   .auth-heading h2 {

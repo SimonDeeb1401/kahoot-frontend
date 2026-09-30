@@ -19,6 +19,6 @@ async function logout(): Promise<void> {
 			<h2>Good to have you, {{ auth.user?.username }}.</h2>
 			<p class="auth-subtitle">Your next round is just around the corner.</p>
 		</header>
-		<button class="auth-submit" type="button" @click="logout">Sign out</button>
+		<button class="auth-submit auth-submit--centered" type="button" @click="logout">Sign out</button>
 	</AuthLayout>
 </template>
