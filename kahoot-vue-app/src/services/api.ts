@@ -24,13 +24,20 @@ function getErrorMessage(payload: unknown): string | undefined {
 	return undefined
 }
 
-export async function postJson(path: string, body: unknown): Promise<unknown> {
+export async function postJson(
+	path: string,
+	body: unknown,
+	accessToken?: string,
+): Promise<unknown> {
 	let response: Response
 
 	try {
 		response = await fetch(`${apiBaseUrl}${path}`, {
 			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
+			headers: {
+				'Content-Type': 'application/json',
+				...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+			},
 			body: JSON.stringify(body),
 		})
 	} catch {

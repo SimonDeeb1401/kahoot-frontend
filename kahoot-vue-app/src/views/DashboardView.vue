@@ -1,10 +1,20 @@
 <script setup lang="ts">
-import { useRouter } from 'vue-router'
+import { onMounted, ref } from 'vue'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 import AuthLayout from '../components/common/AuthLayout.vue'
 import { useAuth } from '../composables/useAuth'
 
 const auth = useAuth()
+const route = useRoute()
 const router = useRouter()
+const quizCreated = ref(false)
+
+onMounted(async () => {
+	if (route.query.created === '1') {
+		quizCreated.value = true
+		await router.replace({ name: 'dashboard' })
+	}
+})
 
 async function logout(): Promise<void> {
 	auth.logout()
@@ -19,6 +29,10 @@ async function logout(): Promise<void> {
 			<h2>Good to have you, {{ auth.user?.username }}.</h2>
 			<p class="auth-subtitle">Your next round is just around the corner.</p>
 		</header>
-		<button class="auth-submit auth-submit--centered" type="button" @click="logout">Sign out</button>
+		<p v-if="quizCreated" class="form-notice" role="status">Quiz created successfully.</p>
+		<div class="dashboard-actions">
+			<RouterLink class="auth-submit" :to="{ name: 'create-quiz' }">Create a quiz</RouterLink>
+			<button class="auth-submit auth-submit--secondary" type="button" @click="logout">Sign out</button>
+		</div>
 	</AuthLayout>
 </template>

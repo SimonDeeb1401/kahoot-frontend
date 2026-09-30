@@ -13,6 +13,26 @@ const authResponse = {
   user,
 }
 
+const quizResponse = {
+  id: 14,
+  title: 'Fractions',
+  description: null,
+  creatorId: user.id,
+  createdAt: '2026-09-30T10:00:00.000Z',
+  updatedAt: '2026-09-30T10:00:00.000Z',
+}
+
+async function signIn(page: import('@playwright/test').Page): Promise<void> {
+  await page.route('**/auth/login', async (route) => {
+    await route.fulfill({ status: 200, json: authResponse })
+  })
+  await page.goto('/login')
+  await page.getByLabel('Email').fill('player@example.com')
+  await page.getByLabel('Password').fill('password123')
+  await page.getByRole('button', { name: 'Sign in' }).click()
+  await expect(page).toHaveURL(/\/dashboard$/)
+}
+
 test('redirects the app root to the login page', async ({ page }) => {
   await page.goto('/')
 
@@ -99,4 +119,61 @@ test('redirects unauthenticated visitors away from the protected screen', async 
   await page.goto('/dashboard')
 
   await expect(page).toHaveURL(/\/login$/)
+})
+
+test('opens the quiz form from the dashboard', async ({ page }) => {
+  await signIn(page)
+
+  await page.getByRole('link', { name: 'Create a quiz' }).click()
+
+  await expect(page).toHaveURL(/\/quizzes\/new$/)
+  await expect(page.getByRole('heading', { name: 'Create a quiz' })).toBeVisible()
+  await expect(page.getByLabel('Title')).toBeVisible()
+  await expect(page.getByLabel('Description (optional)')).toBeVisible()
+})
+
+test('requires a title before sending a quiz creation request', async ({ page }) => {
+  let apiCalled = false
+  await page.route('**/quizzes', async (route) => {
+    apiCalled = true
+    await route.fulfill({ status: 201, json: quizResponse })
+  })
+  await signIn(page)
+  await page.getByRole('link', { name: 'Create a quiz' }).click()
+  await page.getByRole('button', { name: 'Create quiz' }).click()
+
+  await expect(page).toHaveURL(/\/quizzes\/new$/)
+  expect(apiCalled).toBe(false)
+})
+
+test('creates a quiz and returns to the dashboard with confirmation', async ({ page }) => {
+  let requestBody: unknown
+  let authorization: string | undefined
+  await page.route('**/quizzes', async (route) => {
+    requestBody = route.request().postDataJSON()
+    authorization = route.request().headers().authorization
+    await route.fulfill({ status: 201, json: quizResponse })
+  })
+  await signIn(page)
+  await page.getByRole('link', { name: 'Create a quiz' }).click()
+  await page.getByLabel('Title').fill('  Fractions  ')
+  await page.getByRole('button', { name: 'Create quiz' }).click()
+
+  await expect(page).toHaveURL(/\/dashboard$/)
+  await expect(page.getByRole('status')).toHaveText('Quiz created successfully.')
+  expect(requestBody).toEqual({ title: 'Fractions' })
+  expect(authorization).toBe('Bearer signed-token')
+})
+
+test('shows API errors and keeps the quiz form available', async ({ page }) => {
+  await page.route('**/quizzes', async (route) => {
+    await route.fulfill({ status: 400, json: { message: 'Quiz title is invalid' } })
+  })
+  await signIn(page)
+  await page.getByRole('link', { name: 'Create a quiz' }).click()
+  await page.getByLabel('Title').fill('Fractions')
+  await page.getByRole('button', { name: 'Create quiz' }).click()
+
+  await expect(page).toHaveURL(/\/quizzes\/new$/)
+  await expect(page.getByRole('alert')).toHaveText('Quiz title is invalid')
 })
