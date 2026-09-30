@@ -3,6 +3,11 @@ export interface CreateQuizInput {
 	description?: string
 }
 
+export interface UpdateQuizInput {
+	title?: string
+	description?: string | null
+}
+
 export interface Quiz {
 	id: number
 	title: string

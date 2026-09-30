@@ -22,6 +22,106 @@ const quizResponse = {
   updatedAt: '2026-09-30T10:00:00.000Z',
 }
 
+const questionResponse = {
+  id: 3,
+  quizId: 14,
+  text: 'What is 2 + 2?',
+  position: 1,
+  timeLimit: 30,
+  points: 1000,
+}
+
+const answerResponses = [
+  { id: 8, questionId: 3, text: '3', isCorrect: false, position: 1 },
+  { id: 9, questionId: 3, text: '4', isCorrect: true, position: 2 },
+]
+
+interface EditorApiCall {
+  method: string
+  path: string
+  body?: unknown
+}
+
+async function mockQuizEditorApi(page: Page): Promise<EditorApiCall[]> {
+  const calls: EditorApiCall[] = []
+  let nextQuestionId = 4
+  let nextAnswerId = 10
+
+  await page.route('**/quizzes', async (route) => {
+    if (route.request().method() === 'GET') {
+      await route.fulfill({ status: 200, json: [quizResponse] })
+      return
+    }
+    await route.fallback()
+  })
+
+  await page.route('**/quizzes/**', async (route) => {
+    const request = route.request()
+    const path = new URL(request.url()).pathname
+    const method = request.method()
+    const body = method === 'POST' || method === 'PATCH' ? request.postDataJSON() : undefined
+    calls.push({ method, path, body })
+
+    if (path === '/quizzes/14' && method === 'GET') {
+      await route.fulfill({ status: 200, json: quizResponse })
+      return
+    }
+    if (path === '/quizzes/14' && method === 'PATCH') {
+      await route.fulfill({ status: 200, json: { ...quizResponse, ...body } })
+      return
+    }
+    if (path === '/quizzes/14/questions' && method === 'GET') {
+      await route.fulfill({ status: 200, json: [questionResponse] })
+      return
+    }
+    if (path === '/quizzes/14/questions' && method === 'POST') {
+      await route.fulfill({ status: 201, json: { ...body, id: nextQuestionId++, quizId: 14 } })
+      return
+    }
+
+    const questionPath = path.match(/^\/quizzes\/14\/questions\/(\d+)$/)
+    if (questionPath && method === 'PATCH') {
+      await route.fulfill({ status: 200, json: { ...questionResponse, ...body, id: Number(questionPath[1]) } })
+      return
+    }
+    if (questionPath && method === 'DELETE') {
+      await route.fulfill({ status: 204, body: '' })
+      return
+    }
+
+    const answersPath = path.match(/^\/quizzes\/14\/questions\/(\d+)\/answers$/)
+    if (answersPath && method === 'GET') {
+      await route.fulfill({ status: 200, json: Number(answersPath[1]) === 3 ? answerResponses : [] })
+      return
+    }
+    if (answersPath && method === 'POST') {
+      await route.fulfill({
+        status: 201,
+        json: { ...body, id: nextAnswerId++, questionId: Number(answersPath[1]) },
+      })
+      return
+    }
+
+    const answerPath = path.match(/^\/quizzes\/14\/questions\/(\d+)\/answers\/(\d+)$/)
+    if (answerPath && method === 'PATCH') {
+      const existing = answerResponses.find((answer) => answer.id === Number(answerPath[2]))
+      await route.fulfill({
+        status: 200,
+        json: { ...existing, ...body, id: Number(answerPath[2]), questionId: Number(answerPath[1]) },
+      })
+      return
+    }
+    if (answerPath && method === 'DELETE') {
+      await route.fulfill({ status: 204, body: '' })
+      return
+    }
+
+    await route.fallback()
+  })
+
+  return calls
+}
+
 test.beforeEach(async ({ page }) => {
   await page.route('**/quizzes', async (route) => {
     if (route.request().method() === 'GET') {
@@ -294,4 +394,49 @@ test('shows API errors and keeps the quiz form available', async ({ page }) => {
 
   await expect(page).toHaveURL(/\/quizzes\/new$/)
   await expect(page.getByRole('alert')).toHaveText('Quiz title is invalid')
+})
+
+test('edits quiz details, questions, and answers and supports adding and deleting items', async ({ page }) => {
+  const calls = await mockQuizEditorApi(page)
+  await signIn(page)
+  await page.getByRole('link', { name: 'Edit Fractions' }).click()
+
+  await expect(page).toHaveURL(/\/quizzes\/14\/edit$/)
+  await expect(page.getByLabel('Question text')).toHaveValue(questionResponse.text)
+  await expect(page.getByRole('textbox', { name: 'Answer 2', exact: true })).toHaveValue('4')
+
+  await page.getByLabel('Title').fill('Addition practice')
+  await page.getByLabel('Description (optional)').fill('Updated description')
+  await page.getByRole('button', { name: 'Save details' }).click()
+  await expect(page.getByText('Quiz details saved.')).toBeVisible()
+
+  const firstQuestion = page.locator('.question-editor').nth(0)
+  await firstQuestion.getByLabel('Question text').fill('What is 3 + 2?')
+  await firstQuestion.getByRole('textbox', { name: 'Answer 1', exact: true }).fill('5')
+  await firstQuestion.getByLabel('Mark answer 1 correct').check()
+  await firstQuestion.getByRole('button', { name: 'Save question' }).click()
+  await expect(firstQuestion.getByText('Question and answers saved.')).toBeVisible()
+  expect(calls.some((call) => call.method === 'PATCH' && call.path === '/quizzes/14')).toBe(true)
+  expect(calls.some((call) => call.method === 'PATCH' && call.path === '/quizzes/14/questions/3')).toBe(true)
+  expect(calls.some((call) => call.method === 'PATCH' && call.path === '/quizzes/14/questions/3/answers/8')).toBe(true)
+
+  await page.getByRole('button', { name: 'Add question' }).click()
+  const newQuestion = page.locator('.question-editor').nth(1)
+  await newQuestion.getByLabel('Question text').fill('What is 5 + 5?')
+  await newQuestion.getByRole('textbox', { name: 'Answer 1', exact: true }).fill('10')
+  await newQuestion.getByRole('textbox', { name: 'Answer 2', exact: true }).fill('11')
+  await newQuestion.getByRole('button', { name: 'Save question' }).click()
+  await expect(newQuestion.getByText('Question and answers saved.')).toBeVisible()
+  expect(calls.some((call) => call.method === 'POST' && call.path === '/quizzes/14/questions')).toBe(true)
+  expect(calls.some((call) => call.method === 'POST' && call.path === '/quizzes/14/questions/4/answers')).toBe(true)
+
+  page.once('dialog', (dialog) => dialog.accept())
+  await newQuestion.getByRole('button', { name: 'Delete question 2' }).click()
+  await expect(page.locator('.question-editor')).toHaveCount(1)
+  expect(calls.some((call) => call.method === 'DELETE' && call.path === '/quizzes/14/questions/4')).toBe(true)
+
+  page.once('dialog', (dialog) => dialog.accept())
+  await firstQuestion.getByRole('button', { name: 'Delete answer 2' }).click()
+  await expect(firstQuestion.getByRole('textbox', { name: 'Answer 2', exact: true })).toHaveCount(0)
+  expect(calls.some((call) => call.method === 'DELETE' && call.path === '/quizzes/14/questions/3/answers/9')).toBe(true)
 })

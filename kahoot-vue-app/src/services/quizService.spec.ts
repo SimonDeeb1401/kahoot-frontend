@@ -42,6 +42,31 @@ describe('quizService', () => {
 		await expect(quizService.findAll('signed-token')).rejects.toBeInstanceOf(ApiError)
 	})
 
+	it('fetches an individual authenticated quiz', async () => {
+		const fetchMock = mockFetch(quiz, 200)
+
+		await expect(quizService.findOne(quiz.id, 'signed-token')).resolves.toEqual(quiz)
+		expect(fetchMock).toHaveBeenCalledWith(`/quizzes/${quiz.id}`, {
+			method: 'GET',
+			headers: { Authorization: 'Bearer signed-token' },
+		})
+	})
+
+	it('patches quiz details with the bearer token', async () => {
+		const input = { title: 'Updated fractions', description: null }
+		const fetchMock = mockFetch({ ...quiz, ...input }, 200)
+
+		await expect(quizService.update(quiz.id, input, 'signed-token')).resolves.toMatchObject(input)
+		expect(fetchMock).toHaveBeenCalledWith(`/quizzes/${quiz.id}`, {
+			method: 'PATCH',
+			headers: {
+				'Content-Type': 'application/json',
+				Authorization: 'Bearer signed-token',
+			},
+			body: JSON.stringify(input),
+		})
+	})
+
 	it('posts quiz details with the bearer token and returns the saved quiz', async () => {
 		const fetchMock = mockFetch(quiz)
 		const input = { title: 'Fractions', description: 'A quick review' }

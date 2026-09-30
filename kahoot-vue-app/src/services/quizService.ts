@@ -1,5 +1,5 @@
-import { ApiError, deleteJson, getJson, postJson } from './api'
-import type { CreateQuizInput, Quiz } from '../types/quiz'
+import { ApiError, deleteJson, getJson, patchJson, postJson } from './api'
+import type { CreateQuizInput, Quiz, UpdateQuizInput } from '../types/quiz'
 
 function isQuiz(value: unknown): value is Quiz {
 	if (typeof value !== 'object' || value === null) return false
@@ -26,6 +26,22 @@ export const quizService = {
 
 	async create(input: CreateQuizInput, accessToken: string): Promise<Quiz> {
 		const result = await postJson('/quizzes', input, accessToken)
+		if (!isQuiz(result)) {
+			throw new ApiError('The server returned an unexpected quiz response.')
+		}
+		return result
+	},
+
+	async findOne(id: number, accessToken: string): Promise<Quiz> {
+		const result = await getJson(`/quizzes/${id}`, accessToken)
+		if (!isQuiz(result)) {
+			throw new ApiError('The server returned an unexpected quiz response.')
+		}
+		return result
+	},
+
+	async update(id: number, input: UpdateQuizInput, accessToken: string): Promise<Quiz> {
+		const result = await patchJson(`/quizzes/${id}`, input, accessToken)
 		if (!isQuiz(result)) {
 			throw new ApiError('The server returned an unexpected quiz response.')
 		}

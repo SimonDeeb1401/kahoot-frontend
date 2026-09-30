@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { LogOut, Plus, Trash2 } from '@lucide/vue'
+import { LogOut, Pencil, Plus, Trash2 } from '@lucide/vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useAuth } from '../composables/useAuth'
 import { quizService } from '../services/quizService'
@@ -118,6 +118,14 @@ function formatDate(value: string): string {
 					</div>
 					<div class="quiz-row-actions">
 						<time :datetime="quiz.createdAt">{{ formatDate(quiz.createdAt) }}</time>
+						<RouterLink
+							class="quiz-edit-button"
+							:to="{ name: 'edit-quiz', params: { quizId: quiz.id } }"
+							:aria-label="`Edit ${quiz.title}`"
+							:title="`Edit ${quiz.title}`"
+						>
+							<Pencil :size="17" :stroke-width="2" aria-hidden="true" />
+						</RouterLink>
 						<button
 							class="quiz-delete-button"
 							type="button"
