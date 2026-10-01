@@ -3,6 +3,7 @@ import type {
 	GameSession,
 	JoinGameSessionInput,
 	JoinedRoomPlayer,
+	JoinedRoomSummary,
 } from '../types/game-session'
 import { ApiError, getJson, postJson } from './api'
 
@@ -25,6 +26,26 @@ export const gameSessionService = {
 		const result = await getJson('/game-sessions', accessToken)
 		if (!Array.isArray(result) || !result.every(isGameSession)) {
 			throw new ApiError('The server returned an unexpected room list response.')
+		}
+		return result
+	},
+
+	async findJoined(accessToken: string): Promise<JoinedRoomSummary[]> {
+		const result = await getJson('/game-sessions/joined', accessToken)
+		const isJoinedRoomSummary = (value: unknown): value is JoinedRoomSummary => {
+			if (typeof value !== 'object' || value === null) return false
+			const room = value as Partial<JoinedRoomSummary>
+			return (
+				typeof room.playerId === 'number' &&
+				typeof room.sessionId === 'number' &&
+				typeof room.roomCode === 'string' &&
+				typeof room.nickname === 'string' &&
+				typeof room.status === 'string' &&
+				typeof room.quizTitle === 'string'
+			)
+		}
+		if (!Array.isArray(result) || !result.every(isJoinedRoomSummary)) {
+			throw new ApiError('The server returned an unexpected joined room list response.')
 		}
 		return result
 	},

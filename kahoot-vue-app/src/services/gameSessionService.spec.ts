@@ -55,6 +55,24 @@ describe('gameSessionService', () => {
 		})
 	})
 
+	it('lists rooms joined by the authenticated user', async () => {
+		const joinedRoom = {
+			playerId: 31,
+			sessionId: 24,
+			roomCode: 'CD34EF',
+			nickname: 'Player One',
+			status: 'waiting',
+			quizTitle: 'Quiz title',
+		}
+		const fetchMock = mockFetch([joinedRoom])
+
+		await expect(gameSessionService.findJoined('signed-token')).resolves.toEqual([joinedRoom])
+		expect(fetchMock).toHaveBeenCalledWith('/game-sessions/joined', {
+			method: 'GET',
+			headers: { Authorization: 'Bearer signed-token' },
+		})
+	})
+
 	it('creates a hosted room for the selected quiz', async () => {
 		const fetchMock = mockFetch(session, 201)
 		const input = { quizId: 14 }

@@ -37,6 +37,18 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
+      path: '/rooms/:sessionId/host',
+      name: 'host-room-lobby',
+      component: () => import('../views/HostRoomLobbyView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/rooms/:sessionId/competition',
+      name: 'room-competition',
+      component: () => import('../views/RoomCompetitionView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
       path: '/quizzes/new',
       name: 'create-quiz',
       component: () => import('../views/CreateQuizView.vue'),

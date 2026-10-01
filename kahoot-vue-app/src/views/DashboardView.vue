@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { Pencil, Plus, Trash2 } from '@lucide/vue'
+import { Pencil, Plus, Trash2, Users } from '@lucide/vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import AuthenticatedHeader from '../components/common/AuthenticatedHeader.vue'
 import { useAuth } from '../composables/useAuth'
 import { gameSessionService } from '../services/gameSessionService'
 import { quizService } from '../services/quizService'
-import type { GameSession } from '../types/game-session'
+import type { GameSession, JoinedRoomSummary } from '../types/game-session'
 import type { Quiz } from '../types/quiz'
 
 const auth = useAuth()
@@ -17,10 +17,13 @@ const createTarget = computed(() => ({ name: activeTab.value === 'rooms' ? 'crea
 const createLabel = computed(() => (activeTab.value === 'rooms' ? 'Create a room' : 'Create a quiz'))
 const quizzes = ref<Quiz[]>([])
 const rooms = ref<GameSession[]>([])
+const joinedRooms = ref<JoinedRoomSummary[]>([])
 const isLoading = ref(true)
 const error = ref<string | null>(null)
 const isLoadingRooms = ref(true)
 const roomsError = ref<string | null>(null)
+const isLoadingJoinedRooms = ref(true)
+const joinedRoomsError = ref<string | null>(null)
 const deleteError = ref<string | null>(null)
 const deleteSuccess = ref(false)
 const deletingQuizId = ref<number | null>(null)
@@ -60,6 +63,33 @@ async function loadRooms(): Promise<void> {
 	}
 }
 
+async function loadJoinedRooms(): Promise<void> {
+	const accessToken = auth.accessToken
+	if (!accessToken) return
+
+	isLoadingJoinedRooms.value = true
+	joinedRoomsError.value = null
+	try {
+		joinedRooms.value = await gameSessionService.findJoined(accessToken)
+	} catch (cause) {
+		joinedRoomsError.value = cause instanceof Error ? cause.message : 'Unable to load rooms you joined.'
+	} finally {
+		isLoadingJoinedRooms.value = false
+	}
+}
+
+function openJoinedRoom(room: JoinedRoomSummary): void {
+	sessionStorage.setItem(
+		`kahoot:joined-room:${room.sessionId}`,
+		JSON.stringify({
+			playerId: room.playerId,
+			sessionId: room.sessionId,
+			roomCode: room.roomCode,
+			nickname: room.nickname,
+		}),
+	)
+}
+
 async function setActiveTab(tab: 'quizzes' | 'rooms'): Promise<void> {
 	if (activeTab.value === tab) return
 	await router.replace({ name: 'dashboard', query: { ...route.query, view: tab } })
@@ -78,7 +108,7 @@ onMounted(async () => {
 		delete query.created
 		await router.replace({ name: 'dashboard', query })
 	}
-	await Promise.all([loadQuizzes(), loadRooms()])
+	await Promise.all([loadQuizzes(), loadRooms(), loadJoinedRooms()])
 })
 
 async function deleteQuiz(quiz: Quiz): Promise<void> {
@@ -195,23 +225,62 @@ function quizTitleForRoom(room: GameSession): string {
 			</template>
 
 			<template v-else>
-				<p v-if="isLoadingRooms" class="dashboard-message" role="status">Loading hosted rooms...</p>
-				<div v-else-if="roomsError" class="dashboard-error" role="alert">
-					<p>{{ roomsError }}</p>
-					<button class="dashboard-retry" type="button" @click="loadRooms">Try again</button>
-				</div>
-				<div v-else-if="rooms.length === 0" class="dashboard-empty">
-					<h2>No rooms hosted yet</h2>
-					<p>Create a room from one of your quizzes to host a game.</p>
-				</div>
-				<ul v-else class="rooms-grid" aria-label="My hosted rooms">
-					<li v-for="room in rooms" :key="room.id" class="room-card">
-						<p class="room-code-label">ROOM CODE</p>
-						<p class="room-code">{{ room.roomCode }}</p>
-						<h2>{{ quizTitleForRoom(room) }}</h2>
-						<p class="room-status" :class="`room-status--${room.status}`">{{ room.status }}</p>
-					</li>
-				</ul>
+				<section class="rooms-section" aria-labelledby="hosted-rooms-title">
+					<h2 id="hosted-rooms-title" class="rooms-section-title">Rooms you host</h2>
+					<p v-if="isLoadingRooms" class="dashboard-message" role="status">Loading hosted rooms...</p>
+					<div v-else-if="roomsError" class="dashboard-error" role="alert">
+						<p>{{ roomsError }}</p>
+						<button class="dashboard-retry" type="button" @click="loadRooms">Try again</button>
+					</div>
+					<div v-else-if="rooms.length === 0" class="dashboard-empty">
+						<p>Create a room from one of your quizzes to host a game.</p>
+					</div>
+					<ul v-else class="rooms-grid" aria-label="My hosted rooms">
+						<li v-for="room in rooms" :key="room.id" class="room-card">
+							<p class="room-code-label">ROOM CODE</p>
+							<p class="room-code">{{ room.roomCode }}</p>
+							<h3>{{ quizTitleForRoom(room) }}</h3>
+							<p class="room-status" :class="`room-status--${room.status}`">{{ room.status }}</p>
+							<RouterLink
+								v-if="room.status === 'waiting' || room.status === 'active'"
+								class="room-host-action"
+								:to="{ name: 'host-room-lobby', params: { sessionId: room.id } }"
+							>
+								<Users :size="16" aria-hidden="true" />
+								{{ room.status === 'waiting' ? 'Open lobby' : 'Open competition' }}
+							</RouterLink>
+						</li>
+					</ul>
+				</section>
+
+				<section class="rooms-section joined-rooms-section" aria-labelledby="joined-rooms-title">
+					<h2 id="joined-rooms-title" class="rooms-section-title">Rooms you've joined</h2>
+					<p v-if="isLoadingJoinedRooms" class="dashboard-message" role="status">Loading joined rooms...</p>
+					<div v-else-if="joinedRoomsError" class="dashboard-error" role="alert">
+						<p>{{ joinedRoomsError }}</p>
+						<button class="dashboard-retry" type="button" @click="loadJoinedRooms">Try again</button>
+					</div>
+					<div v-else-if="joinedRooms.length === 0" class="dashboard-empty">
+						<p>Rooms you join will appear here.</p>
+					</div>
+					<ul v-else class="rooms-grid" aria-label="Rooms I have joined">
+						<li v-for="room in joinedRooms" :key="room.sessionId" class="room-card">
+							<p class="room-code-label">ROOM CODE</p>
+							<p class="room-code">{{ room.roomCode }}</p>
+							<h3>{{ room.quizTitle }}</h3>
+							<p class="room-status" :class="`room-status--${room.status}`">{{ room.status }}</p>
+							<RouterLink
+								v-if="room.status === 'waiting' || room.status === 'active'"
+								class="room-host-action"
+								:to="{ name: 'room-lobby', params: { sessionId: room.sessionId } }"
+								@click="openJoinedRoom(room)"
+							>
+								<Users :size="16" aria-hidden="true" />
+								{{ room.status === 'waiting' ? 'Open lobby' : 'Return to competition' }}
+							</RouterLink>
+						</li>
+					</ul>
+				</section>
 			</template>
 		</section>
 

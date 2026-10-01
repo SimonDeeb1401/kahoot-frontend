@@ -10,28 +10,19 @@ import {
 	isRoomPlayerList,
 	isRoomSnapshot,
 } from '../services/gameSocketService'
-import type { JoinedRoomPlayer, RoomPlayerSummary } from '../types/game-session'
+import type { RoomPlayerSummary } from '../types/game-session'
 
 const auth = useAuth()
 const route = useRoute()
 const router = useRouter()
-const player = ref<JoinedRoomPlayer | null>(null)
 const players = ref<RoomPlayerSummary[]>([])
+const roomCode = ref('')
+const roomStatus = ref('waiting')
 const isConnected = ref(false)
+const isStarting = ref(false)
 const error = ref<string | null>(null)
 let socket: Socket | null = null
 let isNavigating = false
-
-function isJoinedRoomPlayer(value: unknown): value is JoinedRoomPlayer {
-	if (typeof value !== 'object' || value === null) return false
-	const candidate = value as Partial<JoinedRoomPlayer>
-	return (
-		typeof candidate.playerId === 'number' &&
-		typeof candidate.sessionId === 'number' &&
-		typeof candidate.roomCode === 'string' &&
-		typeof candidate.nickname === 'string'
-	)
-}
 
 async function showCompetition(value: unknown, sessionId: number): Promise<void> {
 	if (!isCompetitionQuiz(value) || value.sessionId !== sessionId || isNavigating) return
@@ -40,28 +31,14 @@ async function showCompetition(value: unknown, sessionId: number): Promise<void>
 	await router.replace({
 		name: 'room-competition',
 		params: { sessionId },
-		query: { role: 'player' },
+		query: { role: 'host' },
 	})
 }
 
 onMounted(async () => {
 	const sessionId = Number(route.params.sessionId)
-	const storageKey = `kahoot:joined-room:${sessionId}`
-	const storedPlayer = sessionStorage.getItem(storageKey)
-	if (!storedPlayer || !auth.accessToken) {
-		await router.replace({ name: storedPlayer ? 'login' : 'available-rooms' })
-		return
-	}
-
-	try {
-		const parsedPlayer: unknown = JSON.parse(storedPlayer)
-		if (!isJoinedRoomPlayer(parsedPlayer) || parsedPlayer.sessionId !== sessionId) {
-			throw new Error('Invalid joined room data')
-		}
-		player.value = parsedPlayer
-	} catch {
-		sessionStorage.removeItem(storageKey)
-		await router.replace({ name: 'available-rooms' })
+	if (!Number.isSafeInteger(sessionId) || sessionId < 1 || !auth.accessToken) {
+		await router.replace({ name: auth.accessToken ? 'dashboard' : 'login' })
 		return
 	}
 
@@ -69,19 +46,22 @@ onMounted(async () => {
 	socket.on('connect', () => {
 		isConnected.value = true
 		error.value = null
-		socket?.emit('join-room', { sessionId, playerId: player.value?.playerId })
+		socket?.emit('join-room', { sessionId })
 	})
 	socket.on('disconnect', () => {
 		isConnected.value = false
+		isStarting.value = false
 	})
 	socket.on('connect_error', () => {
-		error.value = 'Connection lost. Reconnecting to the room...'
+		error.value = 'Unable to connect to the room. Reconnecting...'
 	})
 	socket.on('room-state', (value: unknown) => {
-		if (!isRoomSnapshot(value) || value.sessionId !== sessionId || value.role !== 'player') {
-			error.value = 'You are not a member of this room.'
+		if (!isRoomSnapshot(value) || value.sessionId !== sessionId || value.role !== 'host') {
+			error.value = 'Only the host can manage this room.'
 			return
 		}
+		roomCode.value = value.roomCode
+		roomStatus.value = value.status
 		players.value = value.players
 		if (value.competition) void showCompetition(value.competition, sessionId)
 	})
@@ -89,9 +69,11 @@ onMounted(async () => {
 		if (isRoomPlayerList(value)) players.value = value
 	})
 	socket.on('competition-started', (value: unknown) => {
+		isStarting.value = false
 		void showCompetition(value, sessionId)
 	})
 	socket.on('room-error', (value: unknown) => {
+		isStarting.value = false
 		if (typeof value === 'object' && value !== null && 'message' in value && typeof value.message === 'string') {
 			error.value = value.message
 		}
@@ -100,34 +82,52 @@ onMounted(async () => {
 })
 
 onUnmounted(() => socket?.disconnect())
+
+function startCompetition(): void {
+	if (!socket?.connected || isStarting.value || roomStatus.value !== 'waiting') return
+	isStarting.value = true
+	error.value = null
+	socket.emit('start-competition', { sessionId: Number(route.params.sessionId) })
+}
 </script>
 
 <template>
 	<main class="dashboard-page">
-		<AuthenticatedHeader active="rooms" />
-		<section v-if="player" class="dashboard-main room-lobby-main">
+		<AuthenticatedHeader active="dashboard" />
+		<section class="dashboard-main room-lobby-main">
 			<header class="dashboard-heading room-lobby-heading">
-				<p class="dashboard-eyebrow">ROOM {{ player.roomCode }}</p>
-				<h1>You're in, {{ player.nickname }}.</h1>
-				<p class="dashboard-subtitle">The host will start the quiz when everyone is ready.</p>
+				<p class="dashboard-eyebrow">HOST LOBBY<span v-if="roomCode"> | ROOM {{ roomCode }}</span></p>
+				<h1>Players are joining</h1>
+				<p class="dashboard-subtitle">Start the competition when your players are ready.</p>
 			</header>
 
 			<p v-if="error" class="form-error" role="alert">{{ error }}</p>
 			<div class="room-lobby-status" role="status">
 				<span class="room-lobby-indicator" aria-hidden="true"></span>
 				<div>
-					<p class="room-lobby-status-title">{{ isConnected ? 'Waiting for the host' : 'Connecting to the room' }}</p>
+					<p class="room-lobby-status-title">{{ isConnected ? 'Room is live' : 'Connecting to the room' }}</p>
 					<p class="room-lobby-status-copy">{{ players.length }} {{ players.length === 1 ? 'player' : 'players' }} joined</p>
 				</div>
 			</div>
 
 			<ul class="room-player-list" aria-label="Players in this room">
 				<li v-for="roomPlayer in players" :key="roomPlayer.id">{{ roomPlayer.nickname }}</li>
+				<li v-if="players.length === 0" class="room-player-empty">Waiting for players to join</li>
 			</ul>
 
-			<RouterLink class="room-lobby-back" :to="{ name: 'dashboard' }">
-				Return to dashboard
-			</RouterLink>
+			<div class="room-host-actions">
+				<button
+					class="auth-submit"
+					type="button"
+					:disabled="!isConnected || isStarting || players.length === 0 || roomStatus !== 'waiting'"
+					@click="startCompetition"
+				>
+					{{ isStarting ? 'Starting...' : 'Start competition' }}
+				</button>
+				<RouterLink class="room-host-back" :to="{ name: 'dashboard', query: { view: 'rooms' } }">
+					Back to hosted rooms
+				</RouterLink>
+			</div>
 		</section>
 	</main>
 </template>

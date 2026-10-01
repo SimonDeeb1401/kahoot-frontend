@@ -434,6 +434,130 @@
   font-size: 13px;
 }
 
+.room-player-list {
+  display: grid;
+  max-height: 320px;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr));
+  gap: 8px;
+  overflow-y: auto;
+  margin: 18px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.room-player-list li {
+  overflow-wrap: anywhere;
+  border: 1px solid var(--color-line);
+  border-radius: 4px;
+  padding: 10px 12px;
+  color: var(--color-ink);
+  background: var(--color-white);
+  font-size: 13px;
+}
+
+.room-player-list .room-player-empty {
+  grid-column: 1 / -1;
+  border-style: dashed;
+  color: var(--color-muted);
+  background: transparent;
+}
+
+.room-host-actions {
+  display: grid;
+  justify-items: start;
+  gap: 14px;
+  margin-top: 24px;
+}
+
+.room-host-actions .auth-submit {
+  min-width: 200px;
+}
+
+.room-host-back,
+.room-host-action {
+  color: var(--color-teal-dark);
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+.room-host-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 14px;
+  text-decoration: none;
+}
+
+.room-host-action:hover,
+.room-host-back:hover {
+  color: var(--color-teal);
+}
+
+.competition-main {
+  max-width: 880px;
+}
+
+.competition-heading {
+  margin-bottom: 28px;
+}
+
+.competition-heading h1 {
+  overflow-wrap: anywhere;
+}
+
+.competition-question-list {
+  margin: 0;
+  border-top: 1px solid var(--color-line);
+  padding: 0;
+  list-style: none;
+}
+
+.competition-question-list > li {
+  border-bottom: 1px solid var(--color-line);
+  padding: 24px 0;
+}
+
+.competition-question-meta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--color-muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.competition-question-list h2 {
+  overflow-wrap: anywhere;
+  margin: 12px 0 16px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 21px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.competition-answer-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.competition-answer-list li {
+  overflow-wrap: anywhere;
+  border: 1px solid var(--color-line);
+  border-radius: 4px;
+  padding: 10px 12px;
+  color: var(--color-ink);
+  background: var(--color-white);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
 .room-lobby-back {
   display: inline-block;
   margin-top: 22px;
@@ -460,6 +584,20 @@
   list-style: none;
 }
 
+.rooms-section + .rooms-section {
+  margin-top: 34px;
+  border-top: 1px solid var(--color-line);
+  padding-top: 26px;
+}
+
+.rooms-section-title {
+  margin: 0 0 16px;
+  color: var(--color-ink);
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 20px;
+  font-weight: 600;
+}
+
 .room-card {
   min-width: 0;
   border: 1px solid var(--color-line);
@@ -484,7 +622,8 @@
   font-weight: 700;
 }
 
-.room-card h2 {
+.room-card h2,
+.room-card h3 {
   overflow-wrap: anywhere;
   margin: 0;
   color: var(--color-ink);
@@ -951,6 +1090,10 @@
   }
 
   .rooms-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .competition-answer-list {
     grid-template-columns: 1fr;
   }
 }
