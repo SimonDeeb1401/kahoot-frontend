@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { LogOut, Pencil, Plus, Trash2 } from '@lucide/vue'
+import { Pencil, Plus, Trash2 } from '@lucide/vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
+import AuthenticatedHeader from '../components/common/AuthenticatedHeader.vue'
 import { useAuth } from '../composables/useAuth'
 import { gameSessionService } from '../services/gameSessionService'
 import { quizService } from '../services/quizService'
@@ -80,11 +81,6 @@ onMounted(async () => {
 	await Promise.all([loadQuizzes(), loadRooms()])
 })
 
-async function logout(): Promise<void> {
-	auth.logout()
-	await router.replace({ name: 'login' })
-}
-
 async function deleteQuiz(quiz: Quiz): Promise<void> {
 	if (deletingQuizId.value !== null) return
 	if (!window.confirm(`Delete "${quiz.title}"? This cannot be undone.`)) return
@@ -120,15 +116,7 @@ function quizTitleForRoom(room: GameSession): string {
 
 <template>
 	<main class="dashboard-page">
-		<button
-			class="dashboard-icon-button dashboard-signout"
-			type="button"
-			aria-label="Sign out"
-			title="Sign out"
-			@click="logout"
-		>
-			<LogOut :size="19" :stroke-width="2" aria-hidden="true" />
-		</button>
+		<AuthenticatedHeader active="dashboard" />
 		<div class="dashboard-tabs" role="tablist" aria-label="Dashboard collections">
 			<button
 				class="dashboard-tab"

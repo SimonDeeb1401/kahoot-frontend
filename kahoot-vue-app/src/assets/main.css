@@ -185,21 +185,74 @@
 .dashboard-page {
   position: relative;
   min-height: 100svh;
-  padding: 88px 24px 112px;
+  padding: 104px 24px 112px;
   color: var(--color-ink);
   background: var(--color-paper);
 }
 
-.dashboard-tabs {
+.app-header {
   position: absolute;
-  top: 18px;
-  left: 50%;
+  top: 0;
+  right: 0;
+  left: 0;
+  display: grid;
+  min-height: 68px;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  border-bottom: 1px solid var(--color-line);
+  padding: 9px 24px;
+  background: rgba(255, 254, 250, 0.76);
+}
+
+.app-header-nav {
+  display: inline-flex;
+  grid-column: 2;
+  align-self: stretch;
+  align-items: center;
+  gap: 28px;
+}
+
+.app-header-link {
+  display: inline-flex;
+  min-height: 48px;
+  align-self: stretch;
+  align-items: center;
+  justify-content: center;
+  border-bottom: 2px solid transparent;
+  padding: 0 2px;
+  color: var(--color-muted);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.app-header-link:hover,
+.app-header-link--active {
+  color: var(--color-teal-dark);
+}
+
+.app-header-link--active {
+  border-bottom-color: var(--color-teal);
+}
+
+.app-header-signout {
+  grid-column: 3;
+  justify-self: end;
+  width: 40px;
+  height: 40px;
+}
+
+.dashboard-tabs {
   display: inline-flex;
   gap: 3px;
   border: 1px solid var(--color-line);
   border-radius: 5px;
   padding: 3px;
   background: var(--color-white);
+  margin: 0 auto 24px;
+  position: relative;
+  left: 50%;
   transform: translateX(-50%);
 }
 
@@ -219,13 +272,6 @@
 .dashboard-tab--active {
   color: var(--color-teal-dark);
   background: #e7eee8;
-}
-
-.dashboard-signout {
-  position: fixed;
-  z-index: 2;
-  top: 20px;
-  right: 24px;
 }
 
 .dashboard-icon-button,
@@ -340,6 +386,145 @@
   border-radius: 4px;
   padding: 18px;
   background: var(--color-white);
+}
+
+.room-card--link {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+  transition: border-color 140ms ease, transform 140ms ease, box-shadow 140ms ease;
+}
+
+.room-card--link:hover {
+  transform: translateY(-2px);
+  border-color: #a9c6ba;
+  box-shadow: 0 5px 14px rgba(23, 37, 34, 0.08);
+}
+
+.room-host,
+.room-description {
+  overflow-wrap: anywhere;
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.room-card--link h2 {
+  margin-top: 12px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 18px;
+}
+
+.room-description {
+  margin-top: 7px;
+}
+
+.room-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 19px;
+  border-top: 1px solid var(--color-line);
+  padding-top: 12px;
+}
+
+.room-card-footer .room-status {
+  margin: 0;
+}
+
+.room-card-footer .room-code {
+  margin: 0;
+  font-size: 15px;
+}
+
+.room-preview-main {
+  max-width: 760px;
+}
+
+.room-preview-back {
+  display: inline-block;
+  margin-bottom: 24px;
+  color: var(--color-teal-dark);
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+.room-preview-heading {
+  margin-bottom: 26px;
+}
+
+.room-preview-heading h1 {
+  overflow-wrap: anywhere;
+}
+
+.room-preview-count {
+  margin: 14px 0 0;
+  color: var(--color-muted);
+  font-size: 13px;
+}
+
+.preview-question-list {
+  margin: 0;
+  border-top: 1px solid var(--color-line);
+  padding: 0;
+  list-style: none;
+}
+
+.preview-question {
+  border-bottom: 1px solid var(--color-line);
+  padding: 22px 0 25px;
+}
+
+.preview-question-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.preview-question-number {
+  color: var(--color-coral);
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.preview-question-meta {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 11px;
+}
+
+.preview-question h2 {
+  overflow-wrap: anywhere;
+  margin: 10px 0 14px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.preview-answer-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.preview-answer-list li {
+  overflow-wrap: anywhere;
+  border: 1px solid var(--color-line);
+  border-radius: 4px;
+  padding: 10px 12px;
+  color: var(--color-ink);
+  background: var(--color-white);
+  font-size: 13px;
+  line-height: 1.4;
 }
 
 .room-code-label {
@@ -716,22 +901,28 @@
   }
 
   .dashboard-page {
-    padding: 84px 20px 100px;
+    padding: 90px 20px 100px;
   }
 
-  .dashboard-tabs {
-    top: 14px;
+  .app-header {
+    min-height: 62px;
+    grid-template-columns: minmax(0, 1fr) auto 40px;
+    padding: 8px 16px;
   }
 
-  .dashboard-tab {
+  .app-header-link {
     min-height: 32px;
-    padding-inline: 11px;
+    padding-inline: 2px;
     font-size: 12px;
   }
 
-  .dashboard-signout {
-    top: 16px;
-    right: 16px;
+  .app-header-nav {
+    gap: 16px;
+  }
+
+  .app-header-signout {
+    width: 36px;
+    height: 36px;
   }
 
   .dashboard-main {
@@ -740,6 +931,10 @@
 
   .dashboard-heading h1 {
     font-size: 31px;
+  }
+
+  .preview-answer-list {
+    grid-template-columns: 1fr;
   }
 
   .quiz-row {
