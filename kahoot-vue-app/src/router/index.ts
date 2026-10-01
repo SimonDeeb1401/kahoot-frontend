@@ -31,6 +31,12 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
+      path: '/rooms/new',
+      name: 'create-room',
+      component: () => import('../views/CreateRoomView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
       path: '/quizzes/:quizId/edit',
       name: 'edit-quiz',
       component: () => import('../views/EditQuizView.vue'),

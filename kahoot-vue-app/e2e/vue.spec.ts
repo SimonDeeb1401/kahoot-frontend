@@ -22,6 +22,16 @@ const quizResponse = {
   updatedAt: '2026-09-30T10:00:00.000Z',
 }
 
+const roomResponse = {
+  id: 21,
+  quizId: 14,
+  hostId: user.id,
+  roomCode: 'AB12CD',
+  status: 'waiting',
+  startedAt: null,
+  endedAt: null,
+}
+
 const questionResponse = {
   id: 3,
   quizId: 14,
@@ -124,6 +134,13 @@ async function mockQuizEditorApi(page: Page): Promise<EditorApiCall[]> {
 
 test.beforeEach(async ({ page }) => {
   await page.route('**/quizzes', async (route) => {
+    if (route.request().method() === 'GET') {
+      await route.fulfill({ status: 200, json: [] })
+      return
+    }
+    await route.fallback()
+  })
+  await page.route('**/game-sessions', async (route) => {
     if (route.request().method() === 'GET') {
       await route.fulfill({ status: 200, json: [] })
       return
@@ -253,6 +270,64 @@ test('shows an empty state when the user has no quizzes', async ({ page }) => {
   await signIn(page)
 
   await expect(page.getByRole('heading', { name: 'No quizzes yet' })).toBeVisible()
+})
+
+test('switches to the rooms tab and displays hosted sessions in a grid', async ({ page }) => {
+  await page.route('**/game-sessions', async (route) => {
+    if (route.request().method() === 'GET') {
+      await route.fulfill({ status: 200, json: [roomResponse] })
+      return
+    }
+    await route.fallback()
+  })
+  await page.route('**/quizzes', async (route) => {
+    if (route.request().method() === 'GET') {
+      await route.fulfill({ status: 200, json: [quizResponse] })
+      return
+    }
+    await route.fallback()
+  })
+  await signIn(page)
+
+  await page.getByRole('tab', { name: 'Rooms' }).click()
+  await expect(page).toHaveURL(/\/dashboard\?view=rooms$/)
+  await expect(page.getByRole('heading', { name: 'Hosted rooms' })).toBeVisible()
+  await expect(page.getByText('AB12CD')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Fractions' })).toBeVisible()
+  await expect(page.locator('.rooms-grid')).toBeVisible()
+})
+
+test('creates a room from the selected quiz using the contextual plus action', async ({ page }) => {
+  let requestBody: unknown
+  let sessions = [] as typeof roomResponse[]
+  await page.route('**/quizzes', async (route) => {
+    if (route.request().method() === 'GET') {
+      await route.fulfill({ status: 200, json: [quizResponse] })
+      return
+    }
+    await route.fallback()
+  })
+  await page.route('**/game-sessions', async (route) => {
+    if (route.request().method() === 'GET') {
+      await route.fulfill({ status: 200, json: sessions })
+      return
+    }
+    requestBody = route.request().postDataJSON()
+    sessions = [roomResponse]
+    await route.fulfill({ status: 201, json: roomResponse })
+  })
+  await signIn(page)
+
+  await page.getByRole('tab', { name: 'Rooms' }).click()
+  await page.getByRole('link', { name: 'Create a room' }).click()
+  await expect(page).toHaveURL(/\/rooms\/new$/)
+  await page.getByLabel('Quiz').selectOption('14')
+  await page.getByRole('button', { name: 'Create room' }).click()
+
+  await expect(page).toHaveURL(/\/dashboard\?view=rooms$/)
+  await expect(page.getByText('Room created successfully.')).toBeVisible()
+  await expect(page.getByText('AB12CD')).toBeVisible()
+  expect(requestBody).toEqual({ quizId: 14 })
 })
 
 test('shows a recoverable message if the quiz list fails to load', async ({ page }) => {
