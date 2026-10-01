@@ -24,48 +24,24 @@ function mockFetch(payload: unknown, status = 200) {
 afterEach(() => vi.unstubAllGlobals())
 
 describe('gameSessionService', () => {
-	it('lists joinable rooms with the bearer token', async () => {
-		const room = {
-			id: 24,
+	it('joins a room by code and nickname with the bearer token', async () => {
+		const joinedRoom = {
+			playerId: 31,
+			sessionId: 24,
 			roomCode: 'CD34EF',
-			hostUsername: 'game-host',
-			quiz: { id: 16, title: 'Quiz title', description: null },
+			nickname: 'Player One',
 		}
-		const fetchMock = mockFetch([room])
+		const fetchMock = mockFetch(joinedRoom, 201)
+		const input = { roomCode: 'CD34EF', nickname: 'Player One' }
 
-		await expect(gameSessionService.findJoinable('signed-token')).resolves.toEqual([room])
-		expect(fetchMock).toHaveBeenCalledWith('/game-sessions/available', {
-			method: 'GET',
-			headers: { Authorization: 'Bearer signed-token' },
-		})
-	})
-
-	it('loads a room quiz preview by room id', async () => {
-		const room = {
-			id: 24,
-			roomCode: 'CD34EF',
-			hostUsername: 'game-host',
-			quiz: {
-				id: 16,
-				title: 'Quiz title',
-				description: null,
-				questions: [
-					{
-						id: 41,
-						text: 'Question?',
-						timeLimit: 20,
-						points: 1000,
-						answers: [{ id: 8, text: 'Choice' }],
-					},
-				],
+		await expect(gameSessionService.join(input, 'signed-token')).resolves.toEqual(joinedRoom)
+		expect(fetchMock).toHaveBeenCalledWith('/game-sessions/join', {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				Authorization: 'Bearer signed-token',
 			},
-		}
-		const fetchMock = mockFetch(room)
-
-		await expect(gameSessionService.findJoinableOne(24, 'signed-token')).resolves.toEqual(room)
-		expect(fetchMock).toHaveBeenCalledWith('/game-sessions/available/24', {
-			method: 'GET',
-			headers: { Authorization: 'Bearer signed-token' },
+			body: JSON.stringify(input),
 		})
 	})
 

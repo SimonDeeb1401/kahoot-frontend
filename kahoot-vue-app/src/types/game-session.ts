@@ -13,25 +13,14 @@ export interface GameSession {
 	endedAt: string | null
 }
 
-export interface JoinableRoom {
-	id: number
+export interface JoinGameSessionInput {
 	roomCode: string
-	hostUsername: string
-	quiz: {
-		id: number
-		title: string
-		description: string | null
-	}
+	nickname: string
 }
 
-export interface JoinableRoomDetails extends JoinableRoom {
-	quiz: JoinableRoom['quiz'] & {
-		questions: Array<{
-			id: number
-			text: string
-			timeLimit: number
-			points: number
-			answers: Array<{ id: number; text: string }>
-		}>
-	}
+export interface JoinedRoomPlayer {
+	playerId: number
+	sessionId: number
+	roomCode: string
+	nickname: string
 }

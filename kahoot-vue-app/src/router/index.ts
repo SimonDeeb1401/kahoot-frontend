@@ -31,9 +31,9 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
-      path: '/rooms/:sessionId',
-      name: 'room-quiz',
-      component: () => import('../views/RoomQuizView.vue'),
+      path: '/rooms/:sessionId/lobby',
+      name: 'room-lobby',
+      component: () => import('../views/RoomLobbyView.vue'),
       meta: { requiresAuth: true },
     },
     {

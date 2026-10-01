@@ -1,73 +1,88 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
-import { RouterLink, useRouter } from 'vue-router'
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import AuthenticatedHeader from '../components/common/AuthenticatedHeader.vue'
 import { useAuth } from '../composables/useAuth'
 import { gameSessionService } from '../services/gameSessionService'
-import type { JoinableRoom } from '../types/game-session'
 
 const auth = useAuth()
 const router = useRouter()
-const rooms = ref<JoinableRoom[]>([])
-const isLoading = ref(true)
+const roomCode = ref('')
+const nickname = ref(auth.user?.username ?? '')
+const isSubmitting = ref(false)
 const error = ref<string | null>(null)
 
-async function loadRooms(): Promise<void> {
+async function joinRoom(): Promise<void> {
+	if (isSubmitting.value) return
 	const accessToken = auth.accessToken
 	if (!accessToken) {
 		await router.replace({ name: 'login' })
 		return
 	}
 
-	isLoading.value = true
+	isSubmitting.value = true
 	error.value = null
 	try {
-		rooms.value = await gameSessionService.findJoinable(accessToken)
+		const joinedPlayer = await gameSessionService.join(
+			{ roomCode: roomCode.value.trim().toUpperCase(), nickname: nickname.value.trim() },
+			accessToken,
+		)
+		sessionStorage.setItem(
+			`kahoot:joined-room:${joinedPlayer.sessionId}`,
+			JSON.stringify(joinedPlayer),
+		)
+		await router.push({ name: 'room-lobby', params: { sessionId: joinedPlayer.sessionId } })
 	} catch (cause) {
-		error.value = cause instanceof Error ? cause.message : 'Unable to load available rooms.'
+		error.value = cause instanceof Error ? cause.message : 'Unable to join this room.'
 	} finally {
-		isLoading.value = false
+		isSubmitting.value = false
 	}
 }
-
-onMounted(loadRooms)
 </script>
 
 <template>
-	<main class="dashboard-page">
+	<main class="dashboard-page join-room-page">
 		<AuthenticatedHeader active="rooms" />
-		<section class="dashboard-main">
-			<header class="dashboard-heading">
-				<p class="dashboard-eyebrow">OPEN TO JOIN</p>
-				<h1>Available rooms</h1>
-				<p class="dashboard-subtitle">Choose a room to see its quiz.</p>
+		<section class="dashboard-main join-room-main">
+			<header class="dashboard-heading join-room-heading">
+				<p class="dashboard-eyebrow">ROOM ACCESS</p>
+				<h1>Join a room</h1>
 			</header>
 
-			<p v-if="isLoading" class="dashboard-message" role="status">Loading available rooms...</p>
-			<div v-else-if="error" class="dashboard-error" role="alert">
-				<p>{{ error }}</p>
-				<button class="dashboard-retry" type="button" @click="loadRooms">Try again</button>
-			</div>
-			<div v-else-if="rooms.length === 0" class="dashboard-empty">
-				<h2>No rooms are open right now</h2>
-				<p>Rooms waiting for players will appear here.</p>
-			</div>
-			<ul v-else class="rooms-grid" aria-label="Available rooms">
-				<li v-for="room in rooms" :key="room.id">
-					<RouterLink
-						class="room-card room-card--link"
-						:to="{ name: 'room-quiz', params: { sessionId: room.id } }"
-					>
-						<p class="room-host">Hosted by {{ room.hostUsername }}</p>
-						<h2>{{ room.quiz.title }}</h2>
-						<p class="room-description">{{ room.quiz.description || 'No description' }}</p>
-						<div class="room-card-footer">
-							<span class="room-status room-status--waiting">Waiting for players</span>
-							<span class="room-code">{{ room.roomCode }}</span>
-						</div>
-					</RouterLink>
-				</li>
-			</ul>
+			<form class="auth-form join-room-form" @submit.prevent="joinRoom">
+				<div class="form-field">
+					<label for="room-code">Room code</label>
+					<input
+						id="room-code"
+						v-model="roomCode"
+						name="roomCode"
+						type="text"
+						maxlength="16"
+						pattern="[A-Za-z0-9]{1,16}"
+						autocomplete="off"
+						autocapitalize="characters"
+						spellcheck="false"
+						required
+						@input="roomCode = roomCode.toUpperCase()"
+					/>
+				</div>
+				<div class="form-field">
+					<label for="player-nickname">Nickname</label>
+					<input
+						id="player-nickname"
+						v-model.trim="nickname"
+						name="nickname"
+						type="text"
+						maxlength="32"
+						autocomplete="nickname"
+						required
+					/>
+				</div>
+				<p v-if="error" class="form-error" role="alert">{{ error }}</p>
+				<button class="auth-submit" type="submit" :disabled="isSubmitting">
+					{{ isSubmitting ? 'Joining room...' : 'Join room' }}
+				</button>
+			</form>
 		</section>
 	</main>
 </template>
