@@ -1,32 +1,48 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useMutation, useQueryClient } from '@tanstack/vue-query'
 import { useRouter } from 'vue-router'
 import AuthenticatedHeader from '../components/common/AuthenticatedHeader.vue'
 import { useAuth } from '../composables/useAuth'
 import { gameSessionService } from '../services/gameSessionService'
+import { queryKeys } from '../queries/queryKeys'
 
 const auth = useAuth()
 const router = useRouter()
+const queryClient = useQueryClient()
 const roomCode = ref('')
 const nickname = ref(auth.user?.username ?? '')
-const isSubmitting = ref(false)
+const joinRoomMutation = useMutation({
+	mutationFn: ({ roomCode, nickname, accessToken }: {
+		roomCode: string
+		nickname: string
+		userId: number
+		accessToken: string
+	}) => gameSessionService.join({ roomCode, nickname }, accessToken),
+	onSuccess: async (_, { userId }) => {
+		await queryClient.invalidateQueries({ queryKey: queryKeys.joinedRooms(userId) })
+	},
+})
+const isSubmitting = joinRoomMutation.isPending
 const error = ref<string | null>(null)
 
 async function joinRoom(): Promise<void> {
 	if (isSubmitting.value) return
 	const accessToken = auth.accessToken
-	if (!accessToken) {
+	const userId = auth.user?.id
+	if (!accessToken || !userId) {
 		await router.replace({ name: 'login' })
 		return
 	}
 
-	isSubmitting.value = true
 	error.value = null
 	try {
-		const joinedPlayer = await gameSessionService.join(
-			{ roomCode: roomCode.value.trim().toUpperCase(), nickname: nickname.value.trim() },
+		const joinedPlayer = await joinRoomMutation.mutateAsync({
+			roomCode: roomCode.value.trim().toUpperCase(),
+			nickname: nickname.value.trim(),
 			accessToken,
-		)
+			userId,
+		})
 		sessionStorage.setItem(
 			`kahoot:joined-room:${joinedPlayer.sessionId}`,
 			JSON.stringify(joinedPlayer),
@@ -34,8 +50,6 @@ async function joinRoom(): Promise<void> {
 		await router.push({ name: 'room-lobby', params: { sessionId: joinedPlayer.sessionId } })
 	} catch (cause) {
 		error.value = cause instanceof Error ? cause.message : 'Unable to join this room.'
-	} finally {
-		isSubmitting.value = false
 	}
 }
 </script>

@@ -1,15 +1,28 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useMutation, useQueryClient } from '@tanstack/vue-query'
 import { RouterLink, useRouter } from 'vue-router'
 import AuthLayout from '../components/common/AuthLayout.vue'
 import { useAuth } from '../composables/useAuth'
 import { quizService } from '../services/quizService'
+import { queryKeys } from '../queries/queryKeys'
 
 const auth = useAuth()
 const router = useRouter()
+const queryClient = useQueryClient()
 const title = ref('')
 const description = ref('')
-const isSubmitting = ref(false)
+const createQuizMutation = useMutation({
+	mutationFn: ({ input, accessToken }: {
+		input: { title: string; description?: string }
+		userId: number
+		accessToken: string
+	}) => quizService.create(input, accessToken),
+	onSuccess: async (_, { userId }) => {
+		await queryClient.invalidateQueries({ queryKey: queryKeys.quizList(userId) })
+	},
+})
+const isSubmitting = createQuizMutation.isPending
 const error = ref<string | null>(null)
 
 async function submit(): Promise<void> {
@@ -22,27 +35,26 @@ async function submit(): Promise<void> {
 	}
 
 	const accessToken = auth.accessToken
-	if (!accessToken) {
+	const userId = auth.user?.id
+	if (!accessToken || !userId) {
 		await router.replace({ name: 'login' })
 		return
 	}
 
-	isSubmitting.value = true
 	error.value = null
 
 	try {
-		await quizService.create(
-			{
+		await createQuizMutation.mutateAsync({
+			input: {
 				title: trimmedTitle,
 				description: description.value.trim() || undefined,
 			},
 			accessToken,
-		)
+			userId,
+		})
 		await router.replace({ name: 'dashboard', query: { created: '1' } })
 	} catch (cause) {
 		error.value = cause instanceof Error ? cause.message : 'Unable to create the quiz. Please try again.'
-	} finally {
-		isSubmitting.value = false
 	}
 }
 </script>

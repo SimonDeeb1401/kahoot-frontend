@@ -2,6 +2,7 @@ import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { authService } from '../services/authService'
 import type { AuthUser, LoginCredentials, SignupCredentials } from '../types/user'
+import { queryClient } from '../queries/queryClient'
 
 export const useAuthStore = defineStore('auth', () => {
 	const user = ref<AuthUser | null>(null)
@@ -18,6 +19,7 @@ export const useAuthStore = defineStore('auth', () => {
 
 		try {
 			const response = await authService.login(credentials)
+			queryClient.clear()
 			user.value = response.user
 			accessToken.value = response.accessToken
 			return true
@@ -51,6 +53,7 @@ export const useAuthStore = defineStore('auth', () => {
 	}
 
 	function logout(): void {
+		queryClient.clear()
 		user.value = null
 		accessToken.value = null
 		error.value = null

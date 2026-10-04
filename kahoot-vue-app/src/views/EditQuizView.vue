@@ -1,14 +1,16 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
+import { useMutation, useQueryClient } from '@tanstack/vue-query'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { Plus, Trash2 } from '@lucide/vue'
 import { useAuth } from '../composables/useAuth'
 import { answerService } from '../services/answerService'
 import { questionService } from '../services/questionService'
 import { quizService } from '../services/quizService'
+import { queryKeys } from '../queries/queryKeys'
+import { useQuizEditorQuery } from '../queries/useQuizEditorQuery'
 import type { Answer } from '../types/answer'
 import type { Question } from '../types/question'
-import type { Quiz } from '../types/quiz'
 
 interface AnswerDraft {
 	key: number
@@ -36,14 +38,16 @@ let nextDraftKey = 0
 const auth = useAuth()
 const route = useRoute()
 const router = useRouter()
+const queryClient = useQueryClient()
 const quizId = Number(route.params.quizId)
-const quiz = ref<Quiz | null>(null)
+const editorQuery = useQuizEditorQuery(quizId)
+const isLoading = editorQuery.isLoading
+const loadError = computed(() =>
+	editorQuery.error.value instanceof Error ? editorQuery.error.value.message : null,
+)
 const title = ref('')
 const description = ref('')
 const questions = ref<QuestionDraft[]>([])
-const isLoading = ref(true)
-const isSavingDetails = ref(false)
-const loadError = ref<string | null>(null)
 const detailsError = ref<string | null>(null)
 const detailsSaved = ref(false)
 const pageNotice = ref<string | null>(null)
@@ -98,71 +102,123 @@ function createQuestionDraft(): QuestionDraft {
 	}
 }
 
-async function loadEditor(): Promise<void> {
-	const accessToken = getAccessToken()
-	if (!accessToken) {
+const updateQuizMutation = useMutation({
+	mutationFn: ({ input, accessToken }: {
+		input: { title: string; description: string | null }
+		userId: number
+		accessToken: string
+	}) => quizService.update(quizId, input, accessToken),
+	onSuccess: async (_, { userId }) => {
+		await Promise.all([
+			queryClient.invalidateQueries({ queryKey: queryKeys.quizList(userId) }),
+			queryClient.invalidateQueries({ queryKey: queryKeys.quizEditor(userId, quizId) }),
+		])
+	},
+})
+const isSavingDetails = updateQuizMutation.isPending
+
+type QuestionWriteInput = Pick<Question, 'text' | 'position' | 'timeLimit' | 'points'>
+
+const writeQuestionMutation = useMutation({
+	mutationFn: ({ question, accessToken }: {
+		question: QuestionDraft
+		accessToken: string
+	}) => {
+		const input: QuestionWriteInput = {
+			text: question.text.trim(),
+			position: question.position,
+			timeLimit: Number(question.timeLimit),
+			points: Number(question.points),
+		}
+		return question.id
+			? questionService.update(quizId, question.id, input, accessToken)
+			: questionService.create(quizId, input, accessToken)
+	},
+})
+
+const writeAnswerMutation = useMutation({
+	mutationFn: ({ questionId, answer, position, accessToken }: {
+		questionId: number
+		answer: AnswerDraft
+		position: number
+		accessToken: string
+	}) => {
+		const input = { text: answer.text.trim(), isCorrect: answer.isCorrect, position }
+		return answer.id
+			? answerService.update(quizId, questionId, answer.id, input, accessToken)
+			: answerService.create(quizId, questionId, input, accessToken)
+	},
+})
+
+const deleteQuestionMutation = useMutation({
+	mutationFn: ({ question, accessToken }: {
+		question: QuestionDraft
+		userId: number
+		accessToken: string
+	}) => {
+		if (!question.id) throw new Error('Question has not been saved.')
+		return questionService.remove(quizId, question.id, accessToken)
+	},
+	onSuccess: async (_, { userId }) => {
+		await queryClient.invalidateQueries({ queryKey: queryKeys.quizEditor(userId, quizId) })
+	},
+})
+
+const deleteAnswerMutation = useMutation({
+	mutationFn: ({ questionId, answerId, accessToken }: {
+		questionId: number
+		answerId: number
+		userId: number
+		accessToken: string
+	}) => answerService.remove(quizId, questionId, answerId, accessToken),
+	onSuccess: async (_, { userId }) => {
+		await queryClient.invalidateQueries({ queryKey: queryKeys.quizEditor(userId, quizId) })
+	},
+})
+
+let draftsHydrated = false
+watch(editorQuery.data, (data) => {
+	if (!data || draftsHydrated) return
+	draftsHydrated = true
+	title.value = data.quiz.title
+	description.value = data.quiz.description ?? ''
+	questions.value = data.questions.map(({ question, answers }) => asQuestionDraft(question, answers))
+}, { immediate: true })
+
+onMounted(async () => {
+	if (!auth.accessToken) {
 		await router.replace({ name: 'login' })
 		return
 	}
-	if (!Number.isInteger(quizId) || quizId < 1) {
-		await router.replace({ name: 'dashboard' })
-		return
-	}
-
-	isLoading.value = true
-	loadError.value = null
-	try {
-		const [loadedQuiz, loadedQuestions] = await Promise.all([
-			quizService.findOne(quizId, accessToken),
-			questionService.findAll(quizId, accessToken),
-		])
-		const loadedQuestionDrafts = await Promise.all(
-			loadedQuestions.map(async (question) => {
-				const answers = await answerService.findAll(quizId, question.id, accessToken)
-				return asQuestionDraft(question, answers)
-			}),
-		)
-		quiz.value = loadedQuiz
-		title.value = loadedQuiz.title
-		description.value = loadedQuiz.description ?? ''
-		questions.value = loadedQuestionDrafts
-	} catch (cause) {
-		loadError.value = cause instanceof Error ? cause.message : 'Unable to load this quiz.'
-	} finally {
-		isLoading.value = false
-	}
-}
-
-onMounted(loadEditor)
+	if (!Number.isInteger(quizId) || quizId < 1) await router.replace({ name: 'dashboard' })
+})
 
 async function saveDetails(): Promise<void> {
-	const accessToken = getAccessToken()
 	const trimmedTitle = title.value.trim()
 	if (!trimmedTitle) {
 		detailsError.value = 'Enter a title for your quiz.'
 		return
 	}
-	if (!accessToken) {
+	const accessToken = getAccessToken()
+	const userId = auth.user?.id
+	if (!accessToken || !userId) {
 		await router.replace({ name: 'login' })
 		return
 	}
 
-	isSavingDetails.value = true
 	detailsError.value = null
 	detailsSaved.value = false
 	try {
-		quiz.value = await quizService.update(
-			quizId,
-			{ title: trimmedTitle, description: description.value.trim() || null },
+		const updatedQuiz = await updateQuizMutation.mutateAsync({
+			input: { title: trimmedTitle, description: description.value.trim() || null },
 			accessToken,
-		)
-		title.value = quiz.value.title
-		description.value = quiz.value.description ?? ''
+			userId,
+		})
+		title.value = updatedQuiz.title
+		description.value = updatedQuiz.description ?? ''
 		detailsSaved.value = true
 	} catch (cause) {
 		detailsError.value = cause instanceof Error ? cause.message : 'Unable to save quiz details.'
-	} finally {
-		isSavingDetails.value = false
 	}
 }
 
@@ -201,36 +257,32 @@ async function saveQuestion(question: QuestionDraft): Promise<void> {
 		question.error = 'Choose the correct answer.'
 		return
 	}
+	const userId = auth.user?.id
+	if (!userId) {
+		await router.replace({ name: 'login' })
+		return
+	}
 
 	question.isSaving = true
 	question.error = null
 	question.success = null
 	try {
-		const questionInput = {
-			text: trimmedText,
-			position: question.position,
-			timeLimit: Number(question.timeLimit),
-			points: Number(question.points),
-		}
-		const savedQuestion = question.id
-			? await questionService.update(quizId, question.id, questionInput, accessToken)
-			: await questionService.create(quizId, questionInput, accessToken)
+		const savedQuestion = await writeQuestionMutation.mutateAsync({ question, accessToken })
 		question.id = savedQuestion.id
 		question.text = savedQuestion.text
 
 		for (let index = 0; index < question.answers.length; index += 1) {
 			const answer = question.answers[index]
 			if (!answer) continue
-			const answerInput = {
-				text: answer.text.trim(),
-				isCorrect: answer.isCorrect,
+			const savedAnswer = await writeAnswerMutation.mutateAsync({
+				questionId: question.id,
+				answer,
 				position: index + 1,
-			}
-			const savedAnswer = answer.id
-				? await answerService.update(quizId, question.id, answer.id, answerInput, accessToken)
-				: await answerService.create(quizId, question.id, answerInput, accessToken)
+				accessToken,
+			})
 			Object.assign(answer, savedAnswer)
 		}
+		await queryClient.invalidateQueries({ queryKey: queryKeys.quizEditor(userId, quizId) })
 		question.success = 'Question and answers saved.'
 	} catch (cause) {
 		question.error = cause instanceof Error ? cause.message : 'Unable to save this question.'
@@ -244,7 +296,8 @@ async function deleteQuestion(question: QuestionDraft): Promise<void> {
 	if (!window.confirm(`Delete question ${question.position}? This cannot be undone.`)) return
 
 	const accessToken = getAccessToken()
-	if (question.id && !accessToken) {
+	const userId = auth.user?.id
+	if (question.id && (!accessToken || !userId)) {
 		await router.replace({ name: 'login' })
 		return
 	}
@@ -253,7 +306,7 @@ async function deleteQuestion(question: QuestionDraft): Promise<void> {
 	question.error = null
 	try {
 		if (question.id && accessToken) {
-			await questionService.remove(quizId, question.id, accessToken)
+			await deleteQuestionMutation.mutateAsync({ question, accessToken, userId: userId! })
 		}
 		questions.value = questions.value.filter((item) => item.key !== question.key)
 		pageNotice.value = 'Question deleted.'
@@ -267,15 +320,21 @@ async function deleteQuestion(question: QuestionDraft): Promise<void> {
 async function deleteAnswer(question: QuestionDraft, answer: AnswerDraft): Promise<void> {
 	if (!window.confirm('Delete this answer? This cannot be undone.')) return
 	const accessToken = getAccessToken()
-	if (answer.id && (!question.id || !accessToken)) {
+	const userId = auth.user?.id
+	if (answer.id && (!question.id || !accessToken || !userId)) {
 		await router.replace({ name: 'login' })
 		return
 	}
 
 	question.error = null
 	try {
-		if (answer.id && question.id && accessToken) {
-			await answerService.remove(quizId, question.id, answer.id, accessToken)
+		if (answer.id && question.id && accessToken && userId) {
+			await deleteAnswerMutation.mutateAsync({
+				questionId: question.id,
+				answerId: answer.id,
+				accessToken,
+				userId,
+			})
 		}
 		question.answers = question.answers.filter((item) => item.key !== answer.key)
 		question.answers.forEach((item, index) => (item.position = index + 1))
@@ -297,6 +356,7 @@ async function deleteAnswer(question: QuestionDraft, answer: AnswerDraft): Promi
 		<section v-else-if="loadError" class="quiz-editor-main" aria-labelledby="editor-error-title">
 			<h1 id="editor-error-title">Unable to open quiz</h1>
 			<p class="form-error" role="alert">{{ loadError }}</p>
+			<button class="dashboard-retry" type="button" @click="editorQuery.refetch()">Try again</button>
 			<RouterLink class="auth-switch-link" :to="{ name: 'dashboard' }">Return to my quizzes</RouterLink>
 		</section>
 		<section v-else class="quiz-editor-main" aria-labelledby="editor-title">

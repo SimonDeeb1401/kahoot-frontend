@@ -1,40 +1,33 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
+import { useMutation, useQueryClient } from '@tanstack/vue-query'
 import { RouterLink, useRouter } from 'vue-router'
 import AuthLayout from '../components/common/AuthLayout.vue'
 import { useAuth } from '../composables/useAuth'
 import { gameSessionService } from '../services/gameSessionService'
-import { quizService } from '../services/quizService'
-import type { Quiz } from '../types/quiz'
+import { queryKeys } from '../queries/queryKeys'
+import { useQuizListQuery } from '../queries/useQuizQueries'
 
 const auth = useAuth()
 const router = useRouter()
-const quizzes = ref<Quiz[]>([])
+const queryClient = useQueryClient()
+const quizQuery = useQuizListQuery()
+const quizzes = computed(() => quizQuery.data.value ?? [])
 const selectedQuizId = ref<number | null>(null)
-const isLoading = ref(true)
-const isSubmitting = ref(false)
+const isLoading = quizQuery.isLoading
+const createRoomMutation = useMutation({
+	mutationFn: ({ quizId, accessToken }: { quizId: number; userId: number; accessToken: string }) =>
+		gameSessionService.create({ quizId }, accessToken),
+	onSuccess: async (_, { userId }) => {
+		await queryClient.invalidateQueries({ queryKey: queryKeys.hostedRooms(userId) })
+	},
+})
+const isSubmitting = createRoomMutation.isPending
 const error = ref<string | null>(null)
 
-async function loadQuizzes(): Promise<void> {
-	const accessToken = auth.accessToken
-	if (!accessToken) {
-		await router.replace({ name: 'login' })
-		return
-	}
-
-	isLoading.value = true
-	error.value = null
-	try {
-		quizzes.value = await quizService.findAll(accessToken)
-		selectedQuizId.value = quizzes.value[0]?.id ?? null
-	} catch (cause) {
-		error.value = cause instanceof Error ? cause.message : 'Unable to load your quizzes.'
-	} finally {
-		isLoading.value = false
-	}
-}
-
-onMounted(loadQuizzes)
+watch(quizQuery.data, (loadedQuizzes) => {
+	if (selectedQuizId.value === null) selectedQuizId.value = loadedQuizzes?.[0]?.id ?? null
+}, { immediate: true })
 
 async function submit(): Promise<void> {
 	if (isSubmitting.value) return
@@ -44,20 +37,22 @@ async function submit(): Promise<void> {
 	}
 
 	const accessToken = auth.accessToken
-	if (!accessToken) {
+	const userId = auth.user?.id
+	if (!accessToken || !userId) {
 		await router.replace({ name: 'login' })
 		return
 	}
 
-	isSubmitting.value = true
 	error.value = null
 	try {
-		await gameSessionService.create({ quizId: selectedQuizId.value }, accessToken)
+		await createRoomMutation.mutateAsync({
+			quizId: selectedQuizId.value,
+			accessToken,
+			userId,
+		})
 		await router.replace({ name: 'dashboard', query: { view: 'rooms', created: 'room' } })
 	} catch (cause) {
 		error.value = cause instanceof Error ? cause.message : 'Unable to create the room.'
-	} finally {
-		isSubmitting.value = false
 	}
 }
 </script>
@@ -73,6 +68,10 @@ async function submit(): Promise<void> {
 		<p v-if="error" class="form-error" role="alert">{{ error }}</p>
 
 		<div v-if="isLoading" class="dashboard-message" role="status">Loading your quizzes...</div>
+		<div v-else-if="quizQuery.error.value" class="dashboard-error" role="alert">
+			<p>{{ quizQuery.error.value instanceof Error ? quizQuery.error.value.message : 'Unable to load your quizzes.' }}</p>
+			<button class="dashboard-retry" type="button" @click="quizQuery.refetch()">Try again</button>
+		</div>
 		<div v-else-if="quizzes.length === 0" class="dashboard-empty room-create-empty">
 			<h2>No quizzes available</h2>
 			<p>Create a quiz before starting a room.</p>

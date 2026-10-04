@@ -1,82 +1,59 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { useMutation, useQueryClient } from '@tanstack/vue-query'
 import { Pencil, Plus, Trash2, Users } from '@lucide/vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import AuthenticatedHeader from '../components/common/AuthenticatedHeader.vue'
 import { useAuth } from '../composables/useAuth'
-import { gameSessionService } from '../services/gameSessionService'
 import { quizService } from '../services/quizService'
+import { useHostedRoomsQuery, useJoinedRoomsQuery } from '../queries/useGameSessionQueries'
+import { queryKeys } from '../queries/queryKeys'
+import { useQuizListQuery } from '../queries/useQuizQueries'
 import type { GameSession, JoinedRoomSummary } from '../types/game-session'
 import type { Quiz } from '../types/quiz'
 
 const auth = useAuth()
 const route = useRoute()
 const router = useRouter()
+const queryClient = useQueryClient()
 const activeTab = computed(() => (route.query.view === 'rooms' ? 'rooms' : 'quizzes'))
 const createTarget = computed(() => ({ name: activeTab.value === 'rooms' ? 'create-room' : 'create-quiz' }))
 const createLabel = computed(() => (activeTab.value === 'rooms' ? 'Create a room' : 'Create a quiz'))
-const quizzes = ref<Quiz[]>([])
-const rooms = ref<GameSession[]>([])
-const joinedRooms = ref<JoinedRoomSummary[]>([])
-const isLoading = ref(true)
-const error = ref<string | null>(null)
-const isLoadingRooms = ref(true)
-const roomsError = ref<string | null>(null)
-const isLoadingJoinedRooms = ref(true)
-const joinedRoomsError = ref<string | null>(null)
+const quizQuery = useQuizListQuery()
+const hostedRoomsQuery = useHostedRoomsQuery()
+const joinedRoomsQuery = useJoinedRoomsQuery()
+const quizzes = computed(() => quizQuery.data.value ?? [])
+const rooms = computed(() => hostedRoomsQuery.data.value ?? [])
+const joinedRooms = computed(() => joinedRoomsQuery.data.value ?? [])
+const isLoading = quizQuery.isLoading
+const error = computed(() =>
+	quizQuery.error.value instanceof Error ? quizQuery.error.value.message : null,
+)
+const isLoadingRooms = hostedRoomsQuery.isLoading
+const roomsError = computed(() =>
+	hostedRoomsQuery.error.value instanceof Error ? hostedRoomsQuery.error.value.message : null,
+)
+const isLoadingJoinedRooms = joinedRoomsQuery.isLoading
+const joinedRoomsError = computed(() =>
+	joinedRoomsQuery.error.value instanceof Error ? joinedRoomsQuery.error.value.message : null,
+)
 const deleteError = ref<string | null>(null)
 const deleteSuccess = ref(false)
-const deletingQuizId = ref<number | null>(null)
 const quizCreated = ref(false)
 const roomCreated = ref(false)
-
-async function loadQuizzes(): Promise<void> {
-	const accessToken = auth.accessToken
-	if (!accessToken) {
-		await router.replace({ name: 'login' })
-		return
-	}
-
-	isLoading.value = true
-	error.value = null
-	try {
-		quizzes.value = await quizService.findAll(accessToken)
-	} catch (cause) {
-		error.value = cause instanceof Error ? cause.message : 'Unable to load your quizzes.'
-	} finally {
-		isLoading.value = false
-	}
-}
-
-async function loadRooms(): Promise<void> {
-	const accessToken = auth.accessToken
-	if (!accessToken) return
-
-	isLoadingRooms.value = true
-	roomsError.value = null
-	try {
-		rooms.value = await gameSessionService.findAll(accessToken)
-	} catch (cause) {
-		roomsError.value = cause instanceof Error ? cause.message : 'Unable to load your hosted rooms.'
-	} finally {
-		isLoadingRooms.value = false
-	}
-}
-
-async function loadJoinedRooms(): Promise<void> {
-	const accessToken = auth.accessToken
-	if (!accessToken) return
-
-	isLoadingJoinedRooms.value = true
-	joinedRoomsError.value = null
-	try {
-		joinedRooms.value = await gameSessionService.findJoined(accessToken)
-	} catch (cause) {
-		joinedRoomsError.value = cause instanceof Error ? cause.message : 'Unable to load rooms you joined.'
-	} finally {
-		isLoadingJoinedRooms.value = false
-	}
-}
+const deleteQuizMutation = useMutation({
+	mutationFn: ({ quizId, accessToken }: { quizId: number; userId: number; accessToken: string }) =>
+		quizService.remove(quizId, accessToken),
+	onSuccess: async (_, { quizId, userId }) => {
+		queryClient.setQueryData<Quiz[]>(queryKeys.quizList(userId), (current) =>
+			current?.filter((quiz) => quiz.id !== quizId),
+		)
+		queryClient.removeQueries({ queryKey: queryKeys.quizEditor(userId, quizId) })
+	},
+})
+const deletingQuizId = computed(() =>
+	deleteQuizMutation.isPending.value ? deleteQuizMutation.variables.value?.quizId ?? null : null,
+)
 
 function openJoinedRoom(room: JoinedRoomSummary): void {
 	sessionStorage.setItem(
@@ -108,30 +85,26 @@ onMounted(async () => {
 		delete query.created
 		await router.replace({ name: 'dashboard', query })
 	}
-	await Promise.all([loadQuizzes(), loadRooms(), loadJoinedRooms()])
 })
 
 async function deleteQuiz(quiz: Quiz): Promise<void> {
-	if (deletingQuizId.value !== null) return
+	if (deleteQuizMutation.isPending.value) return
 	if (!window.confirm(`Delete "${quiz.title}"? This cannot be undone.`)) return
 
 	const accessToken = auth.accessToken
-	if (!accessToken) {
+	const userId = auth.user?.id
+	if (!accessToken || !userId) {
 		await router.replace({ name: 'login' })
 		return
 	}
 
-	deletingQuizId.value = quiz.id
 	deleteError.value = null
 	deleteSuccess.value = false
 	try {
-		await quizService.remove(quiz.id, accessToken)
-		quizzes.value = quizzes.value.filter((item) => item.id !== quiz.id)
+		await deleteQuizMutation.mutateAsync({ quizId: quiz.id, userId, accessToken })
 		deleteSuccess.value = true
 	} catch (cause) {
 		deleteError.value = cause instanceof Error ? cause.message : 'Unable to delete the quiz.'
-	} finally {
-		deletingQuizId.value = null
 	}
 }
 
@@ -187,7 +160,7 @@ function quizTitleForRoom(room: GameSession): string {
 				<p v-if="isLoading" class="dashboard-message" role="status">Loading quizzes...</p>
 				<div v-else-if="error" class="dashboard-error" role="alert">
 					<p>{{ error }}</p>
-					<button class="dashboard-retry" type="button" @click="loadQuizzes">Try again</button>
+					<button class="dashboard-retry" type="button" @click="quizQuery.refetch()">Try again</button>
 				</div>
 				<div v-else-if="quizzes.length === 0" class="dashboard-empty">
 					<h2>No quizzes yet</h2>
@@ -230,7 +203,7 @@ function quizTitleForRoom(room: GameSession): string {
 					<p v-if="isLoadingRooms" class="dashboard-message" role="status">Loading hosted rooms...</p>
 					<div v-else-if="roomsError" class="dashboard-error" role="alert">
 						<p>{{ roomsError }}</p>
-						<button class="dashboard-retry" type="button" @click="loadRooms">Try again</button>
+						<button class="dashboard-retry" type="button" @click="hostedRoomsQuery.refetch()">Try again</button>
 					</div>
 					<div v-else-if="rooms.length === 0" class="dashboard-empty">
 						<p>Create a room from one of your quizzes to host a game.</p>
@@ -258,7 +231,7 @@ function quizTitleForRoom(room: GameSession): string {
 					<p v-if="isLoadingJoinedRooms" class="dashboard-message" role="status">Loading joined rooms...</p>
 					<div v-else-if="joinedRoomsError" class="dashboard-error" role="alert">
 						<p>{{ joinedRoomsError }}</p>
-						<button class="dashboard-retry" type="button" @click="loadJoinedRooms">Try again</button>
+						<button class="dashboard-retry" type="button" @click="joinedRoomsQuery.refetch()">Try again</button>
 					</div>
 					<div v-else-if="joinedRooms.length === 0" class="dashboard-empty">
 						<p>Rooms you join will appear here.</p>
