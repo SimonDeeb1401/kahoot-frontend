@@ -109,7 +109,9 @@ export function isAnswerFeedback(value: unknown): value is AnswerFeedback {
 		typeof feedback.questionId === 'number' &&
 		typeof feedback.selectedAnswerId === 'number' &&
 		typeof feedback.correctAnswerId === 'number' &&
-		typeof feedback.isCorrect === 'boolean'
+		typeof feedback.isCorrect === 'boolean' &&
+		typeof feedback.pointsAwarded === 'number' &&
+		typeof feedback.totalScore === 'number'
 	)
 }
 

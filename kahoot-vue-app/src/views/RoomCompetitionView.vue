@@ -280,6 +280,7 @@ function advanceQuestion(): void {
 					</div>
 					<p v-if="feedback" class="player-feedback" :class="{ 'player-feedback--correct': feedback.isCorrect }" role="status">
 						{{ feedback.isCorrect ? 'Correct!' : 'Not quite.' }}
+						<span>{{ feedback.pointsAwarded }} points earned | Total score: {{ feedback.totalScore }}</span>
 						<span v-if="!feedback.isCorrect">The correct answer is {{ delivery.question.answers.find((answer) => answer.id === feedback?.correctAnswerId)?.text ?? 'shown above' }}.</span>
 					</p>
 					<p v-else-if="isSubmitting" class="player-wait-message" role="status">Answer sent. Checking your answer...</p>

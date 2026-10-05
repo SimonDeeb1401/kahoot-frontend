@@ -83,4 +83,6 @@ export interface AnswerFeedback {
 	selectedAnswerId: number
 	correctAnswerId: number
 	isCorrect: boolean
+	pointsAwarded: number
+	totalScore: number
 }
