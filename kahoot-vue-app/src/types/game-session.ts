@@ -60,3 +60,27 @@ export interface RoomSnapshot {
 	players: RoomPlayerSummary[]
 	competition: CompetitionQuiz | null
 }
+
+export interface QuestionDelivery {
+	sessionId: number
+	questionNumber: number
+	totalQuestions: number
+	endsAt: string
+	question: CompetitionQuiz['quiz']['questions'][number]
+}
+
+export interface AnswerProgress {
+	sessionId: number
+	questionId: number
+	answeredCount: number
+	totalPlayers: number
+	answerCounts: Array<{ answerId: number; count: number }>
+}
+
+export interface AnswerFeedback {
+	sessionId: number
+	questionId: number
+	selectedAnswerId: number
+	correctAnswerId: number
+	isCorrect: boolean
+}

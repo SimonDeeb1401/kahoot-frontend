@@ -1,6 +1,9 @@
 import { io, type Socket } from 'socket.io-client'
 import type {
+	AnswerFeedback,
+	AnswerProgress,
 	CompetitionQuiz,
+	QuestionDelivery,
 	RoomPlayerSummary,
 	RoomSnapshot,
 } from '../types/game-session'
@@ -58,6 +61,55 @@ export function isRoomSnapshot(value: unknown): value is RoomSnapshot {
 		Array.isArray(snapshot.players) &&
 		snapshot.players.every(isRoomPlayerSummary) &&
 		(snapshot.competition === null || isCompetitionQuiz(snapshot.competition))
+	)
+}
+
+export function isQuestionDelivery(value: unknown): value is QuestionDelivery {
+	if (typeof value !== 'object' || value === null) return false
+	const delivery = value as Partial<QuestionDelivery>
+	return (
+		typeof delivery.sessionId === 'number' &&
+		typeof delivery.questionNumber === 'number' &&
+		typeof delivery.totalQuestions === 'number' &&
+		typeof delivery.endsAt === 'string' &&
+		typeof delivery.question === 'object' &&
+		delivery.question !== null &&
+		typeof delivery.question.id === 'number' &&
+		typeof delivery.question.text === 'string' &&
+		typeof delivery.question.timeLimit === 'number' &&
+		typeof delivery.question.points === 'number' &&
+		Array.isArray(delivery.question.answers) &&
+		delivery.question.answers.every(
+			(answer) => typeof answer.id === 'number' && typeof answer.text === 'string',
+		)
+	)
+}
+
+export function isAnswerProgress(value: unknown): value is AnswerProgress {
+	if (typeof value !== 'object' || value === null) return false
+	const progress = value as Partial<AnswerProgress>
+	return (
+		typeof progress.sessionId === 'number' &&
+		typeof progress.questionId === 'number' &&
+		typeof progress.answeredCount === 'number' &&
+		typeof progress.totalPlayers === 'number' &&
+		Array.isArray(progress.answerCounts) &&
+		progress.answerCounts.every(
+			(answer) =>
+				typeof answer.answerId === 'number' && typeof answer.count === 'number',
+		)
+	)
+}
+
+export function isAnswerFeedback(value: unknown): value is AnswerFeedback {
+	if (typeof value !== 'object' || value === null) return false
+	const feedback = value as Partial<AnswerFeedback>
+	return (
+		typeof feedback.sessionId === 'number' &&
+		typeof feedback.questionId === 'number' &&
+		typeof feedback.selectedAnswerId === 'number' &&
+		typeof feedback.correctAnswerId === 'number' &&
+		typeof feedback.isCorrect === 'boolean'
 	)
 }
 
