@@ -228,6 +228,37 @@ test('signs in, shows the authenticated screen, and logs out', async ({ page }) 
   await expect(page).toHaveURL(/\/login$/)
 })
 
+for (const status of ['waiting', 'active'] as const) {
+  test(`returns to a ${status} joined room after signing in`, async ({ page }) => {
+    await page.route('**/auth/login', async (route) => {
+      await route.fulfill({ status: 200, json: authResponse })
+    })
+    await page.route('**/game-sessions/joined', async (route) => {
+      await route.fulfill({
+        status: 200,
+        json: [
+          {
+            playerId: 31,
+            sessionId: 24,
+            roomCode: 'CD34EF',
+            nickname: 'Player One',
+            status,
+            quizTitle: 'Fractions',
+          },
+        ],
+      })
+    })
+
+    await page.goto('/login')
+    await page.getByLabel('Email').fill('player@example.com')
+    await page.getByLabel('Password').fill('password123')
+    await page.getByRole('button', { name: 'Sign in' }).click()
+
+    await expect(page).toHaveURL(/\/rooms\/24\/lobby$/)
+    await expect(page.getByRole('heading', { name: "You're in, Player One." })).toBeVisible()
+  })
+}
+
 test('shows an API error when login credentials are rejected', async ({ page }) => {
   await page.route('**/auth/login', async (route) => {
     await route.fulfill({ status: 401, json: { message: 'Invalid email or password' } })
@@ -245,7 +276,7 @@ test('shows an API error when login credentials are rejected', async ({ page }) 
 test('redirects unauthenticated visitors away from the protected screen', async ({ page }) => {
   await page.goto('/dashboard')
 
-  await expect(page).toHaveURL(/\/login$/)
+  await expect(page).toHaveURL(/\/login\?redirect=\/dashboard$/)
 })
 
 test('lists quizzes returned for the signed-in user', async ({ page }) => {

@@ -8,6 +8,7 @@ import { useAuth } from '../composables/useAuth'
 import { quizService } from '../services/quiz-service'
 import { useHostedRoomsQuery, useJoinedRoomsQuery } from '../queries/useGameSessionQueries'
 import { queryKeys } from '../queries/query-keys'
+import { saveJoinedRoomIdentity } from '../services/joined-room-storage'
 import { useQuizListQuery } from '../queries/useQuizQueries'
 import type { GameSession, JoinedRoomSummary } from '../types/game-session'
 import type { Quiz } from '../types/quiz'
@@ -56,15 +57,9 @@ const deletingQuizId = computed(() =>
 )
 
 function openJoinedRoom(room: JoinedRoomSummary): void {
-	sessionStorage.setItem(
-		`kahoot:joined-room:${room.sessionId}`,
-		JSON.stringify({
-			playerId: room.playerId,
-			sessionId: room.sessionId,
-			roomCode: room.roomCode,
-			nickname: room.nickname,
-		}),
-	)
+	const userId = auth.user?.id
+	if (!userId) return
+	saveJoinedRoomIdentity(userId, room)
 }
 
 function hostedRoomTarget(room: GameSession) {

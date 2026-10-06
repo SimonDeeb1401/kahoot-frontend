@@ -10,6 +10,7 @@ import {
 	isRoomPlayerList,
 	isRoomSnapshot,
 } from '../services/game-socket-service'
+import { restoreJoinedRoomIdentity } from '../services/joined-room-storage'
 import type { JoinedRoomPlayer, RoomPlayerSummary } from '../types/game-session'
 
 const auth = useAuth()
@@ -21,17 +22,6 @@ const isConnected = ref(false)
 const error = ref<string | null>(null)
 let socket: Socket | null = null
 let isNavigating = false
-
-function isJoinedRoomPlayer(value: unknown): value is JoinedRoomPlayer {
-	if (typeof value !== 'object' || value === null) return false
-	const candidate = value as Partial<JoinedRoomPlayer>
-	return (
-		typeof candidate.playerId === 'number' &&
-		typeof candidate.sessionId === 'number' &&
-		typeof candidate.roomCode === 'string' &&
-		typeof candidate.nickname === 'string'
-	)
-}
 
 async function showCompetition(value: unknown, sessionId: number): Promise<void> {
 	if (!isCompetitionQuiz(value) || value.sessionId !== sessionId || isNavigating) return
@@ -46,26 +36,27 @@ async function showCompetition(value: unknown, sessionId: number): Promise<void>
 
 onMounted(async () => {
 	const sessionId = Number(route.params.sessionId)
-	const storageKey = `kahoot:joined-room:${sessionId}`
-	const storedPlayer = sessionStorage.getItem(storageKey)
-	if (!storedPlayer || !auth.accessToken) {
-		await router.replace({ name: storedPlayer ? 'login' : 'available-rooms' })
+	const userId = auth.user?.id
+	const accessToken = auth.accessToken
+	if (!accessToken || !userId) {
+		await router.replace({ name: 'login', query: { redirect: route.fullPath } })
 		return
 	}
 
+	let restoredPlayer: JoinedRoomPlayer | null
 	try {
-		const parsedPlayer: unknown = JSON.parse(storedPlayer)
-		if (!isJoinedRoomPlayer(parsedPlayer) || parsedPlayer.sessionId !== sessionId) {
-			throw new Error('Invalid joined room data')
-		}
-		player.value = parsedPlayer
+		restoredPlayer = await restoreJoinedRoomIdentity(userId, sessionId, accessToken)
 	} catch {
-		sessionStorage.removeItem(storageKey)
+		error.value = 'Unable to restore your room. Please try again.'
+		return
+	}
+	if (!restoredPlayer) {
 		await router.replace({ name: 'available-rooms' })
 		return
 	}
+	player.value = restoredPlayer
 
-	socket = createGameSocket(auth.accessToken)
+	socket = createGameSocket(accessToken)
 	socket.on('connect', () => {
 		isConnected.value = true
 		error.value = null

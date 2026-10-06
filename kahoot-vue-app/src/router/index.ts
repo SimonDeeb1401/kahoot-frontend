@@ -72,8 +72,14 @@ const router = createRouter({
 router.beforeEach((to) => {
   const auth = useAuthStore()
 
-  if (to.meta.requiresAuth && !auth.isAuthenticated) return { name: 'login' }
+  if (to.meta.requiresAuth && !auth.isAuthenticated) {
+    return { name: 'login', query: { redirect: to.fullPath } }
+  }
   if (auth.isAuthenticated && (to.name === 'login' || to.name === 'signup')) {
+    const redirect = to.query.redirect
+    if (typeof redirect === 'string' && redirect.startsWith('/') && !redirect.startsWith('//')) {
+      return redirect
+    }
     return { name: 'dashboard' }
   }
 

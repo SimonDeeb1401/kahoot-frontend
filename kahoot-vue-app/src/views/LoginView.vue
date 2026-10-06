@@ -3,6 +3,8 @@ import { computed, ref } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import AuthLayout from '../components/common/AuthLayout.vue'
 import { useAuth } from '../composables/useAuth'
+import { gameSessionService } from '../services/game-session-service'
+import { saveJoinedRoomIdentity } from '../services/joined-room-storage'
 
 const auth = useAuth()
 const route = useRoute()
@@ -17,7 +19,35 @@ async function submit(): Promise<void> {
     password: password.value,
   })
 
-  if (succeeded) await router.replace({ name: 'dashboard' })
+  if (succeeded) {
+    const redirect = route.query.redirect
+    if (typeof redirect === 'string' && redirect.startsWith('/') && !redirect.startsWith('//')) {
+      await router.replace(redirect)
+      return
+    }
+
+    const accessToken = auth.accessToken
+    const userId = auth.user?.id
+    if (accessToken && userId) {
+      try {
+        const joinedRoom = (await gameSessionService.findJoined(accessToken)).find(
+          (room) => room.status === 'waiting' || room.status === 'active',
+        )
+        if (joinedRoom) {
+          saveJoinedRoomIdentity(userId, joinedRoom)
+          await router.replace({
+            name: 'room-lobby',
+            params: { sessionId: joinedRoom.sessionId },
+          })
+          return
+        }
+      } catch {
+        // Keep sign-in successful if room recovery is temporarily unavailable.
+      }
+    }
+
+    await router.replace({ name: 'dashboard' })
+  }
 }
 </script>
 

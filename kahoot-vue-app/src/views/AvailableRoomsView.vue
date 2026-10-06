@@ -5,6 +5,7 @@ import { useRouter } from 'vue-router'
 import AuthenticatedHeader from '../components/common/AuthenticatedHeader.vue'
 import { useAuth } from '../composables/useAuth'
 import { gameSessionService } from '../services/game-session-service'
+import { saveJoinedRoomIdentity } from '../services/joined-room-storage'
 import { queryKeys } from '../queries/query-keys'
 
 const auth = useAuth()
@@ -43,10 +44,7 @@ async function joinRoom(): Promise<void> {
 			accessToken,
 			userId,
 		})
-		sessionStorage.setItem(
-			`kahoot:joined-room:${joinedPlayer.sessionId}`,
-			JSON.stringify(joinedPlayer),
-		)
+		saveJoinedRoomIdentity(userId, joinedPlayer)
 		await router.push({ name: 'room-lobby', params: { sessionId: joinedPlayer.sessionId } })
 	} catch (cause) {
 		error.value = cause instanceof Error ? cause.message : 'Unable to join this room.'

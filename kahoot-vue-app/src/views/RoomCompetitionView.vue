@@ -13,6 +13,7 @@ import {
 	isQuestionDelivery,
 	isRoomSnapshot,
 } from '../services/game-socket-service'
+import { restoreJoinedRoomIdentity } from '../services/joined-room-storage'
 import type {
 	AnswerFeedback,
 	AnswerProgress,
@@ -61,7 +62,9 @@ function setCompetition(value: unknown, sessionId: number): void {
 
 onMounted(async () => {
 	const sessionId = Number(route.params.sessionId)
-	if (!Number.isSafeInteger(sessionId) || sessionId < 1 || !auth.accessToken) {
+	const userId = auth.user?.id
+	const accessToken = auth.accessToken
+	if (!Number.isSafeInteger(sessionId) || sessionId < 1 || !accessToken || !userId) {
 		await router.replace({ name: auth.accessToken ? 'dashboard' : 'login' })
 		return
 	}
@@ -90,29 +93,21 @@ onMounted(async () => {
 
 	let playerId: number | undefined
 	if (!isHost) {
-		const joinedRoom = sessionStorage.getItem(`kahoot:joined-room:${sessionId}`)
-		if (joinedRoom) {
-			try {
-				const parsedRoom: unknown = JSON.parse(joinedRoom)
-				if (
-					typeof parsedRoom === 'object' &&
-					parsedRoom !== null &&
-					'playerId' in parsedRoom &&
-					typeof parsedRoom.playerId === 'number'
-				) {
-					playerId = parsedRoom.playerId
-				}
-			} catch {
-				sessionStorage.removeItem(`kahoot:joined-room:${sessionId}`)
-			}
+		let joinedRoom
+		try {
+			joinedRoom = await restoreJoinedRoomIdentity(userId, sessionId, accessToken)
+		} catch {
+			error.value = 'Unable to restore your room. Please try again.'
+			return
 		}
+		playerId = joinedRoom?.playerId
 		if (!playerId) {
 			await router.replace({ name: 'available-rooms' })
 			return
 		}
 	}
 
-	socket = createGameSocket(auth.accessToken)
+	socket = createGameSocket(accessToken)
 	socket.on('connect', () => {
 		isConnected.value = true
 		error.value = null
