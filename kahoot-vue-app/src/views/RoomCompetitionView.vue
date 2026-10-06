@@ -26,6 +26,7 @@ const route = useRoute()
 const router = useRouter()
 const competition = ref<CompetitionQuiz | null>(null)
 const isHost = route.query.role === 'host'
+const isResultsView = route.query.results === '1'
 const delivery = ref<QuestionDelivery | null>(null)
 const progress = ref<AnswerProgress | null>(null)
 const feedback = ref<AnswerFeedback | null>(null)
@@ -79,7 +80,7 @@ onMounted(async () => {
 			sessionStorage.removeItem(storageKey)
 		}
 	}
-	if (!hasStoredCompetition) {
+	if (!hasStoredCompetition && !isResultsView) {
 		await router.replace({
 			name: isHost ? 'host-room-lobby' : 'room-lobby',
 			params: { sessionId },
@@ -135,6 +136,8 @@ onMounted(async () => {
 			leaderboard.value = value.leaderboard
 			isFinished.value = true
 			delivery.value = null
+		} else if (isResultsView) {
+			error.value = 'The leaderboard is not available for this room.'
 		}
 	})
 	socket.on('competition-started', (value: unknown) => setCompetition(value, sessionId))
@@ -212,15 +215,17 @@ function advanceQuestion(): void {
 <template>
 	<main class="dashboard-page">
 		<AuthenticatedHeader :active="isHost ? 'dashboard' : 'rooms'" />
-		<section v-if="competition" class="dashboard-main competition-main">
+		<section v-if="competition || isResultsView" class="dashboard-main competition-main">
 			<header class="dashboard-heading competition-heading">
-				<p class="dashboard-eyebrow">ROOM {{ competition.roomCode }} | {{ isHost ? 'HOST VIEW' : 'PLAYER VIEW' }}</p>
-				<h1>{{ competition.quiz.title }}</h1>
-				<p v-if="competition.quiz.description" class="dashboard-subtitle">{{ competition.quiz.description }}</p>
+				<p class="dashboard-eyebrow">ROOM {{ competition?.roomCode ?? route.params.sessionId }} | {{ isHost ? 'HOST VIEW' : 'PLAYER VIEW' }}</p>
+				<h1>{{ competition?.quiz.title ?? 'Game results' }}</h1>
+				<p v-if="competition?.quiz.description" class="dashboard-subtitle">{{ competition.quiz.description }}</p>
 			</header>
 
 			<p v-if="error" class="form-error" role="alert">{{ error }}</p>
-			<p v-if="!isConnected && !error" class="dashboard-message" role="status">Reconnecting to the competition...</p>
+			<p v-if="!isConnected && !error" class="dashboard-message" role="status">
+				{{ isResultsView ? 'Loading results...' : 'Reconnecting to the competition...' }}
+			</p>
 
 			<section v-if="isFinished" class="competition-finished" aria-live="polite">
 				<p class="dashboard-eyebrow">QUIZ COMPLETE</p>

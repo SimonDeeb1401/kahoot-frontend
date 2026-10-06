@@ -67,6 +67,32 @@ function openJoinedRoom(room: JoinedRoomSummary): void {
 	)
 }
 
+function hostedRoomTarget(room: GameSession) {
+	return room.status === 'completed'
+		? {
+				name: 'room-competition',
+				params: { sessionId: room.id },
+				query: { role: 'host', results: '1' },
+			}
+		: { name: 'host-room-lobby', params: { sessionId: room.id } }
+}
+
+function joinedRoomTarget(room: JoinedRoomSummary) {
+	return room.status === 'completed'
+		? {
+				name: 'room-competition',
+				params: { sessionId: room.sessionId },
+				query: { role: 'player', results: '1' },
+			}
+		: { name: 'room-lobby', params: { sessionId: room.sessionId } }
+}
+
+function roomActionLabel(status: string, isHost: boolean): string {
+	if (status === 'completed') return 'See leaderboard'
+	if (isHost) return status === 'waiting' ? 'Open lobby' : 'Open competition'
+	return status === 'waiting' ? 'Open lobby' : 'Return to competition'
+}
+
 async function setActiveTab(tab: 'quizzes' | 'rooms'): Promise<void> {
 	if (activeTab.value === tab) return
 	await router.replace({ name: 'dashboard', query: { ...route.query, view: tab } })
@@ -215,12 +241,12 @@ function quizTitleForRoom(room: GameSession): string {
 							<h3>{{ quizTitleForRoom(room) }}</h3>
 							<p class="room-status" :class="`room-status--${room.status}`">{{ room.status }}</p>
 							<RouterLink
-								v-if="room.status === 'waiting' || room.status === 'active'"
+								v-if="room.status === 'waiting' || room.status === 'active' || room.status === 'completed'"
 								class="room-host-action"
-								:to="{ name: 'host-room-lobby', params: { sessionId: room.id } }"
+								:to="hostedRoomTarget(room)"
 							>
 								<Users :size="16" aria-hidden="true" />
-								{{ room.status === 'waiting' ? 'Open lobby' : 'Open competition' }}
+								{{ roomActionLabel(room.status, true) }}
 							</RouterLink>
 						</li>
 					</ul>
@@ -243,13 +269,13 @@ function quizTitleForRoom(room: GameSession): string {
 							<h3>{{ room.quizTitle }}</h3>
 							<p class="room-status" :class="`room-status--${room.status}`">{{ room.status }}</p>
 							<RouterLink
-								v-if="room.status === 'waiting' || room.status === 'active'"
+								v-if="room.status === 'waiting' || room.status === 'active' || room.status === 'completed'"
 								class="room-host-action"
-								:to="{ name: 'room-lobby', params: { sessionId: room.sessionId } }"
+								:to="joinedRoomTarget(room)"
 								@click="openJoinedRoom(room)"
 							>
 								<Users :size="16" aria-hidden="true" />
-								{{ room.status === 'waiting' ? 'Open lobby' : 'Return to competition' }}
+								{{ roomActionLabel(room.status, false) }}
 							</RouterLink>
 						</li>
 					</ul>
