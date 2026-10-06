@@ -2,7 +2,9 @@ import { io, type Socket } from 'socket.io-client'
 import type {
 	AnswerFeedback,
 	AnswerProgress,
+	CompetitionFinished,
 	CompetitionQuiz,
+	LeaderboardEntry,
 	QuestionDelivery,
 	RoomPlayerSummary,
 	RoomSnapshot,
@@ -16,6 +18,23 @@ function isRoomPlayerSummary(value: unknown): value is RoomPlayerSummary {
 
 export function isRoomPlayerList(value: unknown): value is RoomPlayerSummary[] {
 	return Array.isArray(value) && value.every(isRoomPlayerSummary)
+}
+
+function isLeaderboardEntry(value: unknown): value is LeaderboardEntry {
+	return (
+		isRoomPlayerSummary(value) &&
+		typeof (value as Partial<LeaderboardEntry>).score === 'number'
+	)
+}
+
+export function isCompetitionFinished(value: unknown): value is CompetitionFinished {
+	if (typeof value !== 'object' || value === null) return false
+	const finished = value as Partial<CompetitionFinished>
+	return (
+		typeof finished.sessionId === 'number' &&
+		Array.isArray(finished.leaderboard) &&
+		finished.leaderboard.every(isLeaderboardEntry)
+	)
 }
 
 export function isCompetitionQuiz(value: unknown): value is CompetitionQuiz {
@@ -60,7 +79,9 @@ export function isRoomSnapshot(value: unknown): value is RoomSnapshot {
 		(snapshot.role === 'host' || snapshot.role === 'player') &&
 		Array.isArray(snapshot.players) &&
 		snapshot.players.every(isRoomPlayerSummary) &&
-		(snapshot.competition === null || isCompetitionQuiz(snapshot.competition))
+		(snapshot.competition === null || isCompetitionQuiz(snapshot.competition)) &&
+		(snapshot.leaderboard === null ||
+			(Array.isArray(snapshot.leaderboard) && snapshot.leaderboard.every(isLeaderboardEntry)))
 	)
 }
 

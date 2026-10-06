@@ -8,6 +8,7 @@ import {
 	createGameSocket,
 	isAnswerFeedback,
 	isAnswerProgress,
+	isCompetitionFinished,
 	isCompetitionQuiz,
 	isQuestionDelivery,
 	isRoomSnapshot,
@@ -15,6 +16,7 @@ import {
 import type {
 	AnswerFeedback,
 	AnswerProgress,
+	LeaderboardEntry,
 	CompetitionQuiz,
 	QuestionDelivery,
 } from '../types/game-session'
@@ -27,6 +29,7 @@ const isHost = route.query.role === 'host'
 const delivery = ref<QuestionDelivery | null>(null)
 const progress = ref<AnswerProgress | null>(null)
 const feedback = ref<AnswerFeedback | null>(null)
+const leaderboard = ref<LeaderboardEntry[]>([])
 const selectedAnswerId = ref<number | null>(null)
 const isConnected = ref(false)
 const isSubmitting = ref(false)
@@ -128,6 +131,11 @@ onMounted(async () => {
 			return
 		}
 		if (value.competition) setCompetition(value.competition, sessionId)
+		if (value.status === 'completed' && value.leaderboard) {
+			leaderboard.value = value.leaderboard
+			isFinished.value = true
+			delivery.value = null
+		}
 	})
 	socket.on('competition-started', (value: unknown) => setCompetition(value, sessionId))
 	socket.on('question-delivered', (value: unknown) => {
@@ -156,9 +164,11 @@ onMounted(async () => {
 		isSubmitting.value = false
 	})
 	socket.on('competition-finished', (value: unknown) => {
-		if (typeof value === 'object' && value !== null && 'sessionId' in value && value.sessionId === sessionId) {
+		if (isCompetitionFinished(value) && value.sessionId === sessionId) {
+			leaderboard.value = value.leaderboard
 			isFinished.value = true
 			delivery.value = null
+			isAdvancing.value = false
 		}
 	})
 	socket.on('room-error', (value: unknown) => {
@@ -214,7 +224,14 @@ function advanceQuestion(): void {
 
 			<section v-if="isFinished" class="competition-finished" aria-live="polite">
 				<p class="dashboard-eyebrow">QUIZ COMPLETE</p>
-				<h2>That's the last question.</h2>
+				<h2>Final leaderboard</h2>
+				<ol class="competition-leaderboard" aria-label="Final leaderboard">
+					<li v-for="(entry, index) in leaderboard" :key="entry.id">
+						<span class="competition-leaderboard-rank">{{ index + 1 }}</span>
+						<span class="competition-leaderboard-name">{{ entry.nickname }}</span>
+						<strong class="competition-leaderboard-score">{{ entry.score.toLocaleString() }}</strong>
+					</li>
+				</ol>
 				<RouterLink class="room-lobby-back" :to="{ name: 'dashboard', query: { view: 'rooms' } }">
 					Return to rooms
 				</RouterLink>

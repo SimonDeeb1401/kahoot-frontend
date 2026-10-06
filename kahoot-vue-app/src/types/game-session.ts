@@ -35,6 +35,15 @@ export interface RoomPlayerSummary {
 	nickname: string
 }
 
+export interface LeaderboardEntry extends RoomPlayerSummary {
+	score: number
+}
+
+export interface CompetitionFinished {
+	sessionId: number
+	leaderboard: LeaderboardEntry[]
+}
+
 export interface CompetitionQuiz {
 	sessionId: number
 	roomCode: string
@@ -59,6 +68,7 @@ export interface RoomSnapshot {
 	role: 'host' | 'player'
 	players: RoomPlayerSummary[]
 	competition: CompetitionQuiz | null
+	leaderboard: LeaderboardEntry[] | null
 }
 
 export interface QuestionDelivery {

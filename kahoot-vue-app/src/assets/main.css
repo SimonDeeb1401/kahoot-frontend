@@ -832,6 +832,46 @@
   font-weight: 600;
 }
 
+.competition-leaderboard {
+  display: grid;
+  margin: 20px 0 0;
+  border-top: 1px solid var(--color-line);
+  padding: 0;
+  list-style: none;
+}
+
+.competition-leaderboard li {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  min-height: 58px;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid var(--color-line);
+  color: var(--color-ink);
+}
+
+.competition-leaderboard-rank {
+  color: var(--color-muted);
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.competition-leaderboard-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.competition-leaderboard-score {
+  color: var(--color-teal-dark);
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+}
+
 @media (max-width: 560px) {
   .player-answer-grid {
     grid-template-columns: minmax(0, 1fr);
