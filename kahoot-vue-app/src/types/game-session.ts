@@ -39,9 +39,18 @@ export interface LeaderboardEntry extends RoomPlayerSummary {
 	score: number
 }
 
+export interface QuestionStatistic {
+	questionId: number
+	questionText: string
+	correctAnswers: number
+	totalPlayers: number
+	averageResponseTimeMs: number | null
+}
+
 export interface CompetitionFinished {
 	sessionId: number
 	leaderboard: LeaderboardEntry[]
+	statistics: QuestionStatistic[]
 }
 
 export interface CompetitionQuiz {
@@ -69,6 +78,7 @@ export interface RoomSnapshot {
 	players: RoomPlayerSummary[]
 	competition: CompetitionQuiz | null
 	leaderboard: LeaderboardEntry[] | null
+	statistics: QuestionStatistic[] | null
 }
 
 export interface QuestionDelivery {

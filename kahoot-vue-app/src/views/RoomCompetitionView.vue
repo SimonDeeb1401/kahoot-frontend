@@ -19,6 +19,7 @@ import type {
 	AnswerProgress,
 	LeaderboardEntry,
 	CompetitionQuiz,
+	QuestionStatistic,
 	QuestionDelivery,
 } from '../types/game-session'
 
@@ -32,6 +33,7 @@ const delivery = ref<QuestionDelivery | null>(null)
 const progress = ref<AnswerProgress | null>(null)
 const feedback = ref<AnswerFeedback | null>(null)
 const leaderboard = ref<LeaderboardEntry[]>([])
+const statistics = ref<QuestionStatistic[]>([])
 const selectedAnswerId = ref<number | null>(null)
 const isConnected = ref(false)
 const isSubmitting = ref(false)
@@ -58,6 +60,11 @@ function setCompetition(value: unknown, sessionId: number): void {
 	if (!isCompetitionQuiz(value) || value.sessionId !== sessionId) return
 	competition.value = value
 	sessionStorage.setItem(`kahoot:competition:${sessionId}`, JSON.stringify(value))
+}
+
+function successRate(statistic: QuestionStatistic): string {
+	if (statistic.totalPlayers === 0) return '—'
+	return `${Math.round((statistic.correctAnswers / statistic.totalPlayers) * 100)}%`
 }
 
 onMounted(async () => {
@@ -129,6 +136,7 @@ onMounted(async () => {
 		if (value.competition) setCompetition(value.competition, sessionId)
 		if (value.status === 'completed' && value.leaderboard) {
 			leaderboard.value = value.leaderboard
+			statistics.value = value.statistics ?? []
 			isFinished.value = true
 			delivery.value = null
 		} else if (isResultsView) {
@@ -164,6 +172,7 @@ onMounted(async () => {
 	socket.on('competition-finished', (value: unknown) => {
 		if (isCompetitionFinished(value) && value.sessionId === sessionId) {
 			leaderboard.value = value.leaderboard
+			statistics.value = value.statistics
 			isFinished.value = true
 			delivery.value = null
 			isAdvancing.value = false
@@ -232,6 +241,31 @@ function advanceQuestion(): void {
 						<strong class="competition-leaderboard-score">{{ entry.score.toLocaleString() }}</strong>
 					</li>
 				</ol>
+				<section class="competition-statistics" aria-labelledby="competition-statistics-heading">
+					<h2 id="competition-statistics-heading">Room statistics</h2>
+					<p class="competition-statistics-note">
+						Success rate is based on all players; response time averages submitted answers.
+					</p>
+					<ol class="competition-statistics-list" aria-label="Statistics by question">
+						<li v-for="(statistic, index) in statistics" :key="statistic.questionId">
+							<h3><span>Q{{ index + 1 }}</span>{{ statistic.questionText }}</h3>
+							<dl>
+								<div>
+									<dt>Success rate</dt>
+									<dd>{{ successRate(statistic) }}</dd>
+								</div>
+								<div>
+									<dt>Average response time</dt>
+									<dd>
+										{{ statistic.averageResponseTimeMs === null
+											? 'No responses'
+											: `${(statistic.averageResponseTimeMs / 1000).toFixed(1)} s` }}
+									</dd>
+								</div>
+							</dl>
+						</li>
+					</ol>
+				</section>
 				<RouterLink class="room-lobby-back" :to="{ name: 'dashboard', query: { view: 'rooms' } }">
 					Return to rooms
 				</RouterLink>

@@ -5,6 +5,7 @@ import type {
 	CompetitionFinished,
 	CompetitionQuiz,
 	LeaderboardEntry,
+	QuestionStatistic,
 	QuestionDelivery,
 	RoomPlayerSummary,
 	RoomSnapshot,
@@ -27,13 +28,28 @@ function isLeaderboardEntry(value: unknown): value is LeaderboardEntry {
 	)
 }
 
+function isQuestionStatistic(value: unknown): value is QuestionStatistic {
+	if (typeof value !== 'object' || value === null) return false
+	const statistic = value as Partial<QuestionStatistic>
+	return (
+		typeof statistic.questionId === 'number' &&
+		typeof statistic.questionText === 'string' &&
+		typeof statistic.correctAnswers === 'number' &&
+		typeof statistic.totalPlayers === 'number' &&
+		(statistic.averageResponseTimeMs === null ||
+			typeof statistic.averageResponseTimeMs === 'number')
+	)
+}
+
 export function isCompetitionFinished(value: unknown): value is CompetitionFinished {
 	if (typeof value !== 'object' || value === null) return false
 	const finished = value as Partial<CompetitionFinished>
 	return (
 		typeof finished.sessionId === 'number' &&
 		Array.isArray(finished.leaderboard) &&
-		finished.leaderboard.every(isLeaderboardEntry)
+		finished.leaderboard.every(isLeaderboardEntry) &&
+		Array.isArray(finished.statistics) &&
+		finished.statistics.every(isQuestionStatistic)
 	)
 }
 
@@ -81,7 +97,9 @@ export function isRoomSnapshot(value: unknown): value is RoomSnapshot {
 		snapshot.players.every(isRoomPlayerSummary) &&
 		(snapshot.competition === null || isCompetitionQuiz(snapshot.competition)) &&
 		(snapshot.leaderboard === null ||
-			(Array.isArray(snapshot.leaderboard) && snapshot.leaderboard.every(isLeaderboardEntry)))
+			(Array.isArray(snapshot.leaderboard) && snapshot.leaderboard.every(isLeaderboardEntry))) &&
+		(snapshot.statistics === null ||
+			(Array.isArray(snapshot.statistics) && snapshot.statistics.every(isQuestionStatistic)))
 	)
 }
 

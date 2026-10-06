@@ -872,6 +872,83 @@
   font-variant-numeric: tabular-nums;
 }
 
+.competition-statistics {
+  margin-top: 32px;
+}
+
+.competition-statistics h2 {
+  margin: 0;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.competition-statistics-note {
+  margin: 8px 0 16px;
+  color: var(--color-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.competition-statistics-list {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.competition-statistics-list li {
+  border: 1px solid var(--color-line);
+  border-radius: 6px;
+  padding: 16px;
+  background: var(--color-white);
+}
+
+.competition-statistics-list h3 {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0 0 14px;
+  color: var(--color-ink);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.competition-statistics-list h3 span {
+  flex: 0 0 auto;
+  color: var(--color-teal-dark);
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+}
+
+.competition-statistics-list dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+}
+
+.competition-statistics-list dl div {
+  display: grid;
+  gap: 4px;
+}
+
+.competition-statistics-list dt {
+  color: var(--color-muted);
+  font-size: 11px;
+}
+
+.competition-statistics-list dd {
+  margin: 0;
+  color: var(--color-ink);
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
 @media (max-width: 560px) {
   .player-answer-grid {
     grid-template-columns: minmax(0, 1fr);
