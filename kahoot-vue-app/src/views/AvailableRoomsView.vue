@@ -4,8 +4,8 @@ import { useMutation, useQueryClient } from '@tanstack/vue-query'
 import { useRouter } from 'vue-router'
 import AuthenticatedHeader from '../components/common/AuthenticatedHeader.vue'
 import { useAuth } from '../composables/useAuth'
-import { gameSessionService } from '../services/gameSessionService'
-import { queryKeys } from '../queries/queryKeys'
+import { gameSessionService } from '../services/game-session-service'
+import { queryKeys } from '../queries/query-keys'
 
 const auth = useAuth()
 const router = useRouter()

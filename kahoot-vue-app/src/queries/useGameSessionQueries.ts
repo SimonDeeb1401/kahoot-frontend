@@ -1,8 +1,8 @@
 import { computed } from 'vue'
 import { useQuery } from '@tanstack/vue-query'
 import { useAuth } from '../composables/useAuth'
-import { gameSessionService } from '../services/gameSessionService'
-import { queryKeys } from './queryKeys'
+import { gameSessionService } from '../services/game-session-service'
+import { queryKeys } from './query-keys'
 
 function useSessionQuery<T>(
 	keyForUser: (userId: number) => readonly unknown[],

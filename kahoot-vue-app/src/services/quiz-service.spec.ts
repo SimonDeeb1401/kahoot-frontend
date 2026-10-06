@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from './api'
-import { quizService } from './quizService'
+import { quizService } from './quiz-service'
 
 const quiz = {
 	id: 14,

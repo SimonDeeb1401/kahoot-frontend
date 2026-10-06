@@ -1,8 +1,8 @@
 import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { authService } from '../services/authService'
-import { queryClient } from '../queries/queryClient'
-import { useAuthStore } from './authStore'
+import { authService } from '../services/auth-service'
+import { queryClient } from '../queries/query-client'
+import { useAuthStore } from './useAuthStore'
 
 const authResponse = {
 	accessToken: 'signed-token',

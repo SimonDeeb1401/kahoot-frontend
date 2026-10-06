@@ -1,8 +1,8 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
-import { authService } from '../services/authService'
+import { authService } from '../services/auth-service'
 import type { AuthUser, LoginCredentials, SignupCredentials } from '../types/user'
-import { queryClient } from '../queries/queryClient'
+import { queryClient } from '../queries/query-client'
 
 export const useAuthStore = defineStore('auth', () => {
 	const user = ref<AuthUser | null>(null)

@@ -11,7 +11,7 @@ import {
 	isCompetitionQuiz,
 	isQuestionDelivery,
 	isRoomSnapshot,
-} from '../services/gameSocketService'
+} from '../services/game-socket-service'
 import type {
 	AnswerFeedback,
 	AnswerProgress,

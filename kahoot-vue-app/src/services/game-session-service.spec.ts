@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { gameSessionService } from './gameSessionService'
+import { gameSessionService } from './game-session-service'
 
 const session = {
 	id: 21,

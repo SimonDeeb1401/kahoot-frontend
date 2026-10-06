@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from './api'
-import { authService } from './authService'
+import { authService } from './auth-service'
 
 const authResponse = {
   accessToken: 'signed-token',

@@ -1,8 +1,8 @@
 import { computed } from 'vue'
 import { useQuery } from '@tanstack/vue-query'
 import { useAuth } from '../composables/useAuth'
-import { quizService } from '../services/quizService'
-import { queryKeys } from './queryKeys'
+import { quizService } from '../services/quiz-service'
+import { queryKeys } from './query-keys'
 
 export function useQuizListQuery() {
 	const auth = useAuth()

@@ -1,13 +1,13 @@
 import { computed } from 'vue'
 import { useQuery } from '@tanstack/vue-query'
 import { useAuth } from '../composables/useAuth'
-import { answerService } from '../services/answerService'
-import { questionService } from '../services/questionService'
-import { quizService } from '../services/quizService'
+import { answerService } from '../services/answer-service'
+import { questionService } from '../services/question-service'
+import { quizService } from '../services/quiz-service'
 import type { Answer } from '../types/answer'
 import type { Question } from '../types/question'
 import type { Quiz } from '../types/quiz'
-import { queryKeys } from './queryKeys'
+import { queryKeys } from './query-keys'
 
 export interface QuizEditorData {
 	quiz: Quiz

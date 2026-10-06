@@ -9,7 +9,7 @@ import {
 	isCompetitionQuiz,
 	isRoomPlayerList,
 	isRoomSnapshot,
-} from '../services/gameSocketService'
+} from '../services/game-socket-service'
 import type { RoomPlayerSummary } from '../types/game-session'
 
 const auth = useAuth()

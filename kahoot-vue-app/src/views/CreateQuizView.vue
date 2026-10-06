@@ -4,8 +4,8 @@ import { useMutation, useQueryClient } from '@tanstack/vue-query'
 import { RouterLink, useRouter } from 'vue-router'
 import AuthLayout from '../components/common/AuthLayout.vue'
 import { useAuth } from '../composables/useAuth'
-import { quizService } from '../services/quizService'
-import { queryKeys } from '../queries/queryKeys'
+import { quizService } from '../services/quiz-service'
+import { queryKeys } from '../queries/query-keys'
 
 const auth = useAuth()
 const router = useRouter()

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { questionService } from './questionService'
+import { questionService } from './question-service'
 
 const question = {
 	id: 3,

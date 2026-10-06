@@ -4,8 +4,8 @@ import { useMutation, useQueryClient } from '@tanstack/vue-query'
 import { RouterLink, useRouter } from 'vue-router'
 import AuthLayout from '../components/common/AuthLayout.vue'
 import { useAuth } from '../composables/useAuth'
-import { gameSessionService } from '../services/gameSessionService'
-import { queryKeys } from '../queries/queryKeys'
+import { gameSessionService } from '../services/game-session-service'
+import { queryKeys } from '../queries/query-keys'
 import { useQuizListQuery } from '../queries/useQuizQueries'
 
 const auth = useAuth()
