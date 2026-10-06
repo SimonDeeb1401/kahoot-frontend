@@ -83,7 +83,7 @@ function joinedRoomTarget(room: JoinedRoomSummary) {
 }
 
 function roomActionLabel(status: string, isHost: boolean): string {
-	if (status === 'completed') return 'See leaderboard'
+	if (status === 'completed') return 'View Results'
 	if (isHost) return status === 'waiting' ? 'Open lobby' : 'Open competition'
 	return status === 'waiting' ? 'Open lobby' : 'Return to competition'
 }
