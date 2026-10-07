@@ -24,7 +24,7 @@ function isAuthResponse(value: unknown): value is AuthResponse {
 }
 
 async function requestAuth(path: string, body: LoginCredentials | SignupCredentials): Promise<AuthResponse> {
-	const response = await postJson(path, body)
+	const response = await postJson(path, body, undefined, 'include')
 	if (!isAuthResponse(response)) {
 		throw new ApiError('The server returned an unexpected authentication response.')
 	}
@@ -38,5 +38,17 @@ export const authService = {
 
 	signup(credentials: SignupCredentials): Promise<AuthResponse> {
 		return requestAuth('/auth/signup', credentials)
+	},
+
+	async refresh(): Promise<AuthResponse> {
+		const response = await postJson('/auth/refresh', {}, undefined, 'include')
+		if (!isAuthResponse(response)) {
+			throw new ApiError('The server returned an unexpected authentication response.')
+		}
+		return response
+	},
+
+	async logout(): Promise<void> {
+		await postJson('/auth/logout', {}, undefined, 'include')
 	},
 }

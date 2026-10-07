@@ -9,7 +9,7 @@ const auth = useAuth()
 const router = useRouter()
 
 async function logout(): Promise<void> {
-	auth.logout()
+	await auth.logout()
 	await router.replace({ name: 'login' })
 }
 </script>

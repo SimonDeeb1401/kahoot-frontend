@@ -36,10 +36,22 @@ describe('authStore query cache lifecycle', () => {
 		expect(queryClient.getQueryData(['protected', 9])).toBeUndefined()
 	})
 
-	it('clears cached server data on logout', () => {
+	it('clears cached server data on logout', async () => {
 		const auth = useAuthStore()
-		auth.logout()
+		vi.spyOn(authService, 'logout').mockResolvedValue(undefined)
+		await auth.logout()
 
 		expect(queryClient.getQueryData(['protected', 9])).toBeUndefined()
+	})
+
+	it('restores the user and access token from the refresh cookie', async () => {
+		vi.spyOn(authService, 'refresh').mockResolvedValue(authResponse)
+		const auth = useAuthStore()
+
+		await auth.restoreSession()
+
+		expect(auth.user?.id).toBe(authResponse.user.id)
+		expect(auth.accessToken).toBe(authResponse.accessToken)
+		expect(auth.isAuthenticated).toBe(true)
 	})
 })

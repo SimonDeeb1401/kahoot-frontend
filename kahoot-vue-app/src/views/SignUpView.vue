@@ -17,7 +17,7 @@ async function submit(): Promise<void> {
     password: password.value,
   })
 
-  if (succeeded) await router.replace({ name: 'login', query: { registered: '1' } })
+  if (succeeded) await router.replace({ name: 'dashboard' })
 }
 </script>
 

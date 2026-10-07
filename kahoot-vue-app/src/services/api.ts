@@ -29,6 +29,7 @@ async function requestJson(
 	method: 'GET' | 'POST' | 'PATCH' | 'DELETE',
 	body?: unknown,
 	accessToken?: string,
+	credentials: RequestCredentials = 'same-origin',
 ): Promise<unknown> {
 	let response: Response
 
@@ -40,9 +41,9 @@ async function requestJson(
 		const request: RequestInit = { method, headers }
 		if (body !== undefined) request.body = JSON.stringify(body)
 
-		response = await fetch(`${apiBaseUrl}${path}`, {
-			...request,
-		})
+		const requestOptions: RequestInit = { ...request }
+		if (credentials !== 'same-origin') requestOptions.credentials = credentials
+		response = await fetch(`${apiBaseUrl}${path}`, requestOptions)
 	} catch {
 		throw new ApiError('Unable to reach the server. Check your connection and try again.')
 	}
@@ -66,8 +67,9 @@ export function postJson(
 	path: string,
 	body: unknown,
 	accessToken?: string,
+	credentials?: RequestCredentials,
 ): Promise<unknown> {
-	return requestJson(path, 'POST', body, accessToken)
+	return requestJson(path, 'POST', body, accessToken, credentials)
 }
 
 export function patchJson(

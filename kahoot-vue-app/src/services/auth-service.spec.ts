@@ -38,6 +38,7 @@ describe('authService', () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: 'player@example.com', password: 'password123' }),
+      credentials: 'include',
     })
   })
 
@@ -52,7 +53,20 @@ describe('authService', () => {
     await expect(authService.signup(credentials)).resolves.toEqual(authResponse)
     expect(fetchMock).toHaveBeenCalledWith('/auth/signup', expect.objectContaining({
       body: JSON.stringify(credentials),
+      credentials: 'include',
     }))
+  })
+
+  it('restores the current session through the HttpOnly refresh cookie', async () => {
+    const fetchMock = mockFetch(authResponse)
+
+    await expect(authService.refresh()).resolves.toEqual(authResponse)
+    expect(fetchMock).toHaveBeenCalledWith('/auth/refresh', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+      credentials: 'include',
+    })
   })
 
   it('surfaces API validation messages and status codes', async () => {

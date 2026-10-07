@@ -9,7 +9,28 @@ export const useAuthStore = defineStore('auth', () => {
 	const accessToken = ref<string | null>(null)
 	const isLoading = ref(false)
 	const error = ref<string | null>(null)
+	const sessionInitialized = ref(false)
 	const isAuthenticated = computed(() => Boolean(user.value && accessToken.value))
+	let restorePromise: Promise<void> | undefined
+
+	async function restoreSession(): Promise<void> {
+		if (sessionInitialized.value) return
+
+		restorePromise ??= (async () => {
+			try {
+				const response = await authService.refresh()
+				user.value = response.user
+				accessToken.value = response.accessToken
+			} catch {
+				user.value = null
+				accessToken.value = null
+			} finally {
+				sessionInitialized.value = true
+			}
+		})()
+
+		await restorePromise
+	}
 
 	async function login(credentials: LoginCredentials): Promise<boolean> {
 		if (isLoading.value) return false
@@ -22,6 +43,7 @@ export const useAuthStore = defineStore('auth', () => {
 			queryClient.clear()
 			user.value = response.user
 			accessToken.value = response.accessToken
+			sessionInitialized.value = true
 			return true
 		} catch (cause) {
 			error.value = cause instanceof Error ? cause.message : 'Unable to sign in. Please try again.'
@@ -38,7 +60,11 @@ export const useAuthStore = defineStore('auth', () => {
 		error.value = null
 
 		try {
-			await authService.signup(credentials)
+			const response = await authService.signup(credentials)
+			queryClient.clear()
+			user.value = response.user
+			accessToken.value = response.accessToken
+			sessionInitialized.value = true
 			return true
 		} catch (cause) {
 			error.value = cause instanceof Error ? cause.message : 'Unable to create your account. Please try again.'
@@ -52,12 +78,26 @@ export const useAuthStore = defineStore('auth', () => {
 		error.value = null
 	}
 
-	function logout(): void {
+	async function logout(): Promise<void> {
 		queryClient.clear()
 		user.value = null
 		accessToken.value = null
 		error.value = null
+		sessionInitialized.value = true
+		await authService.logout().catch(() => undefined)
 	}
 
-	return { user, accessToken, isLoading, error, isAuthenticated, login, signup, clearError, logout }
+	return {
+		user,
+		accessToken,
+		isLoading,
+		error,
+		isAuthenticated,
+		sessionInitialized,
+		restoreSession,
+		login,
+		signup,
+		clearError,
+		logout,
+	}
 })
